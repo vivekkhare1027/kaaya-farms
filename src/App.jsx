@@ -558,7 +558,16 @@ function Tasks() {
     setEditSh(true)
   }
 
-  const saveEdit=async()=>{ if(!editTodo) return; setSaving(true); const ok=await updateTodo(editTodo.id,{title:form.title,due_date:form.due_date,priority:form.priority,assigned_to:form.assigned_to}); setSaving(false); if(ok){setEditSh(false);setEditTodo(null)} }
+  const saveEdit=async()=>{
+    if(!editTodo) return
+    setSaving(true)
+    // Destructure only the allowed fields — status is intentionally excluded
+    // so editing a task never changes its done/pending state
+    const {title,due_date,priority,assigned_to}=form
+    const ok=await updateTodo(editTodo.id,{title,due_date,priority,assigned_to})
+    setSaving(false)
+    if(ok){setEditSh(false);setEditTodo(null)}
+  }
 
   const doDelete=async()=>{
     if(!confirmDel){setConfirmDel(true);return}
