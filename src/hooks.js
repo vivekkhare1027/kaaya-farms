@@ -199,7 +199,7 @@ export function useLedger() {
     const channel = supabase
       .channel('ledger-changes')
       .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'ledger_entries',
+        event: '*', schema: 'public', table: 'ledger_entries',
         filter: `farm_id=eq.${FARM_ID}`
       }, fetch)
       .subscribe()
@@ -214,6 +214,28 @@ export function useLedger() {
     return true
   }
 
+  const updateEntry = async (id, fields) => {
+    const { error } = await supabase
+      .from('ledger_entries')
+      .update(fields)
+      .eq('id', id)
+      .eq('farm_id', FARM_ID)
+    if (error) { log('updateLedgerEntry', error); return false }
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, ...fields } : e))
+    return true
+  }
+
+  const deleteEntry = async (id) => {
+    const { error } = await supabase
+      .from('ledger_entries')
+      .delete()
+      .eq('id', id)
+      .eq('farm_id', FARM_ID)
+    if (error) { log('deleteLedgerEntry', error); return false }
+    setEntries(prev => prev.filter(e => e.id !== id))
+    return true
+  }
+
   const uploadReceipt = async (file) => {
     const ext  = file.name.split('.').pop()
     const path = `receipts/${FARM_ID}/${Date.now()}.${ext}`
@@ -225,7 +247,7 @@ export function useLedger() {
     return data.publicUrl
   }
 
-  return { entries, loading, addEntry, uploadReceipt }
+  return { entries, loading, addEntry, updateEntry, deleteEntry, uploadReceipt }
 }
 
 export function useTodos() {

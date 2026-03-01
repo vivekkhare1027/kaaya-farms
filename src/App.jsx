@@ -7,16 +7,19 @@ import {
 
 const TODAY = new Date().toISOString().split('T')[0]
 const fmt   = n => `₹${Number(n).toLocaleString('en-IN')}`
+const LEDGER_INIT = {type:'expense',category:'dairy_feed',amount:'',description:'',payment_mode:'cash',entry_date:TODAY,logged_by:'Papa',receipt_url:''}
 
 const CAT = {
-  milk_sale:   { icon:'🥛', label:'Milk Sale',  hi:'दूध बिक्री', color:'#2d8a5e' },
-  feed:        { icon:'🌾', label:'Feed',        hi:'चारा',       color:'#b5721a' },
-  medicine:    { icon:'💊', label:'Medicine',    hi:'दवाई',       color:'#b04040' },
-  labour:      { icon:'👷', label:'Labour',      hi:'मजदूरी',     color:'#2e6fa8' },
-  utilities:   { icon:'⚡', label:'Utilities',   hi:'बिजली',      color:'#6b5ba8' },
-  grocery:     { icon:'🛒', label:'Grocery',     hi:'किराना',     color:'#a04878' },
-  maintenance: { icon:'🔧', label:'Repair',      hi:'मरम्मत',     color:'#5a7050' },
-  other:       { icon:'📌', label:'Other',       hi:'अन्य',       color:'#7a7870' },
+  dairy_feed:   { icon:'🥛', label:'Dairy & Feed',   hi:'दूध/चारा',   color:'#2d8a5e' },
+  construction: { icon:'🏗️', label:'Construction',   hi:'निर्माण',    color:'#8B6914' },
+  transport:    { icon:'🚛', label:'Transport',       hi:'परिवहन',     color:'#2e6fa8' },
+  labour:       { icon:'👷', label:'Labour',          hi:'मजदूरी',     color:'#b5721a' },
+  medicine:     { icon:'💊', label:'Medicine & Vet',  hi:'दवाई',       color:'#b04040' },
+  utilities:    { icon:'⚡', label:'Utilities',       hi:'बिजली/पानी', color:'#6b5ba8' },
+  grocery:      { icon:'🛒', label:'Grocery',         hi:'किराना',     color:'#a04878' },
+  equipment:    { icon:'🔧', label:'Equipment',       hi:'उपकरण',      color:'#5a7050' },
+  milk_sale:    { icon:'🥛', label:'Milk Sale',       hi:'दूध बिक्री', color:'#2d8a5e' },
+  other:        { icon:'📌', label:'Other',           hi:'अन्य',       color:'#7a7870' },
 }
 const HEVT = {
   vaccination:{ icon:'💉', label:'Vaccination' },
@@ -395,18 +398,59 @@ function Dairy() {
 }
 
 function Ledger() {
-  const { entries, addEntry, uploadReceipt } = useLedger()
+  const { entries, addEntry, updateEntry, deleteEntry, uploadReceipt } = useLedger()
   const [sh,setSh]=useState(false)
+  const [editSh,setEditSh]=useState(false)
+  const [editEntry,setEditEntry]=useState(null)
   const [filter,setFilter]=useState('all')
+  const [catFilter,setCatFilter]=useState(null)
   const [parsing,setParsing]=useState(false)
   const [saving,setSaving]=useState(false)
+  const [confirmDel,setConfirmDel]=useState(false)
   const fileRef=useRef()
-  const [form,setForm]=useState({type:'expense',category:'feed',amount:'',description:'',payment_mode:'cash',entry_date:TODAY,logged_by:'Papa'})
+  const editFileRef=useRef()
+  const [form,setForm]=useState(LEDGER_INIT)
+
   const inc=entries.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0)
   const exp=entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0)
-  const list=filter==='all'?entries:entries.filter(e=>e.type===filter)
-  const save=async()=>{ setSaving(true); const ok=await addEntry({...form,amount:parseFloat(form.amount)}); setSaving(false); if(ok){setSh(false);setForm({type:'expense',category:'feed',amount:'',description:'',payment_mode:'cash',entry_date:TODAY,logged_by:'Papa'})} }
-  const handlePhoto=async(e)=>{ const file=e.target.files[0]; if(!file) return; setParsing(true); const url=await uploadReceipt(file); setForm(f=>({...f,description:'Receipt scanned 📷',receipt_url:url||''})); setParsing(false); setSh(true) }
+  const typeFiltered=filter==='all'?entries:entries.filter(e=>e.type===filter)
+  const list=catFilter?typeFiltered.filter(e=>e.category===catFilter):typeFiltered
+  const activeCats=Object.keys(CAT).filter(k=>entries.some(e=>e.category===k))
+
+  const save=async()=>{ setSaving(true); const ok=await addEntry({...form,amount:parseFloat(form.amount)}); setSaving(false); if(ok){setSh(false);setForm(LEDGER_INIT)} }
+
+  const openEdit=(entry)=>{
+    setEditEntry(entry)
+    setForm({type:entry.type,category:entry.category||'other',amount:String(entry.amount),description:entry.description||'',payment_mode:entry.payment_mode||'cash',entry_date:entry.entry_date||TODAY,logged_by:entry.logged_by||'Papa',receipt_url:entry.receipt_url||''})
+    setConfirmDel(false)
+    setEditSh(true)
+  }
+
+  const saveEdit=async()=>{ if(!editEntry) return; setSaving(true); const ok=await updateEntry(editEntry.id,{...form,amount:parseFloat(form.amount)}); setSaving(false); if(ok){setEditSh(false);setEditEntry(null)} }
+
+  const doDelete=async()=>{
+    if(!confirmDel){setConfirmDel(true);return}
+    setSaving(true); await deleteEntry(editEntry.id); setSaving(false)
+    setEditSh(false);setEditEntry(null);setConfirmDel(false)
+  }
+
+  const handlePhoto=async(e,isEdit)=>{ const file=e.target.files[0]; if(!file) return; setParsing(true); const url=await uploadReceipt(file); setForm(f=>({...f,receipt_url:url||''})); setParsing(false); if(!isEdit) setSh(true) }
+
+  const formFields=()=>(
+    <>
+      <Field label='Type · प्रकार'><div style={{display:'flex',gap:8}}><TBtn label='↑ Income' active={form.type==='income'} onClick={()=>setForm({...form,type:'income'})} activeColor='#2D8A5E' activeBg='#EEF8F2' /><TBtn label='↓ Expense' active={form.type==='expense'} onClick={()=>setForm({...form,type:'expense'})} activeColor='#B04040' activeBg='#FFF5F5' /></div></Field>
+      <Field label='Category · श्रेणी'><div style={{display:'flex',flexWrap:'wrap',gap:7}}>{Object.entries(CAT).map(([k,v])=><button key={k} onClick={()=>setForm({...form,category:k})} style={{padding:'8px 13px',borderRadius:10,border:`1.5px solid ${form.category===k?v.color:'#DDD0BC'}`,background:form.category===k?v.color+'18':'transparent',color:form.category===k?v.color:'#6A5840',fontFamily:"'DM Sans',sans-serif",fontWeight:500,fontSize:14,cursor:'pointer',transition:'all .15s'}}>{v.icon} {v.label}</button>)}</div></Field>
+      <Field label='Amount · राशि (₹)'><Inp type='number' placeholder='0' style={{fontSize:26,fontWeight:700}} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} /></Field>
+      <Field label='Description · विवरण'><Inp placeholder='What was this for?' value={form.description} onChange={e=>setForm({...form,description:e.target.value})} /></Field>
+      <Field label='Date · तारीख'><Inp type='date' value={form.entry_date} onChange={e=>setForm({...form,entry_date:e.target.value})} /></Field>
+      <div style={{display:'flex',gap:10}}>
+        <Field label='Payment'><Sel value={form.payment_mode} onChange={e=>setForm({...form,payment_mode:e.target.value})} style={{fontSize:15}}>{['cash','upi','bank','credit'].map(p=><option key={p}>{p}</option>)}</Sel></Field>
+        <Field label='Logged by'><Sel value={form.logged_by} onChange={e=>setForm({...form,logged_by:e.target.value})} style={{fontSize:15}}>{['Papa','Mummy','You','Farm Hand'].map(u=><option key={u}>{u}</option>)}</Sel></Field>
+      </div>
+      {form.receipt_url&&<div style={{marginBottom:16}}><div style={{fontSize:11,fontWeight:700,letterSpacing:1.4,textTransform:'uppercase',color:'#8A7A60',marginBottom:7}}>Receipt Photo</div><img src={form.receipt_url} alt='receipt' style={{width:80,height:80,objectFit:'cover',borderRadius:10,border:'1.5px solid #DDD0BC'}} /></div>}
+    </>
+  )
+
   return (
     <div style={{display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div style={{padding:'18px 20px 0',display:'flex',justifyContent:'space-between',alignItems:'flex-end',flexShrink:0}}>
@@ -416,8 +460,8 @@ function Ledger() {
         </div>
         <div style={{display:'flex',gap:8}}>
           <button onClick={()=>fileRef.current?.click()} style={{background:'#EDE6D8',border:'1px solid #DDD0BC',borderRadius:12,padding:'10px 14px',fontSize:20,cursor:'pointer'}}>{parsing?'⏳':'📷'}</button>
-          <input ref={fileRef} type='file' accept='image/*' capture='environment' style={{display:'none'}} onChange={handlePhoto} />
-          <BtnGold small onClick={()=>setSh(true)}>+ Add</BtnGold>
+          <input ref={fileRef} type='file' accept='image/*' capture='environment' style={{display:'none'}} onChange={e=>handlePhoto(e,false)} />
+          <BtnGold small onClick={()=>{setForm(LEDGER_INIT);setSh(true)}}>+ Add</BtnGold>
         </div>
       </div>
       <div style={{overflowY:'auto',padding:'16px 20px 24px',display:'flex',flexDirection:'column',gap:12}}>
@@ -434,12 +478,21 @@ function Ledger() {
           <div style={{fontSize:12,fontWeight:700,color:'#B87820',letterSpacing:1}}>NET BALANCE · शुद्ध बचत</div>
           <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:700,color:inc-exp>=0?'#2D8A5E':'#B04040'}}>{fmt(inc-exp)}</div>
         </div>
-        {parsing&&<Card style={{textAlign:'center',padding:20}}><div style={{fontSize:28,marginBottom:8}}>🤖</div><div style={{fontWeight:600}}>Uploading receipt...</div></Card>}
+        {parsing&&<Card style={{textAlign:'center',padding:20}}><div style={{fontSize:28,marginBottom:8}}>🤖</div><div style={{fontWeight:600}}>Uploading photo...</div></Card>}
         <div style={{display:'flex',gap:4,background:'#EDE6D8',borderRadius:14,padding:4,border:'1px solid #DDD0BC'}}>
           {[['all','All'],['income','↑ Income'],['expense','↓ Expense']].map(([k,l])=>(
             <button key={k} onClick={()=>setFilter(k)} style={{flex:1,padding:'10px',border:'none',borderRadius:10,cursor:'pointer',background:filter===k?'#fff':'transparent',color:filter===k?'#1A1008':'#8A7A60',fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:14,boxShadow:filter===k?'0 2px 8px rgba(60,30,0,0.1)':'none',transition:'all .18s'}}>{l}</button>
           ))}
         </div>
+        {activeCats.length>0&&(
+          <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:2,scrollbarWidth:'none',msOverflowStyle:'none'}}>
+            <button onClick={()=>setCatFilter(null)} style={{flexShrink:0,padding:'6px 13px',borderRadius:20,border:`1.5px solid ${!catFilter?'#B87820':'#DDD0BC'}`,background:!catFilter?'rgba(184,120,32,0.1)':'transparent',color:!catFilter?'#B87820':'#8A7A60',fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:12,cursor:'pointer',whiteSpace:'nowrap',transition:'all .15s'}}>All Categories</button>
+            {activeCats.map(k=>{
+              const cat=CAT[k]; const active=catFilter===k
+              return <button key={k} onClick={()=>setCatFilter(active?null:k)} style={{flexShrink:0,padding:'6px 12px',borderRadius:20,border:`1.5px solid ${active?cat.color:'#DDD0BC'}`,background:active?cat.color+'18':'transparent',color:active?cat.color:'#8A7A60',fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:12,cursor:'pointer',whiteSpace:'nowrap',transition:'all .15s'}}>{cat.icon} {cat.label}</button>
+            })}
+          </div>
+        )}
         <Card style={{padding:'4px 18px'}}>
           {list.length===0&&<div style={{padding:'20px 0',textAlign:'center',color:'#8A7A60',fontSize:14}}>No entries yet.</div>}
           {list.map((e,i)=>{
@@ -447,12 +500,13 @@ function Ledger() {
             return (
               <Row key={e.id} last={i===list.length-1}>
                 <IBox bg={cat.color+'18'}>{cat.icon}</IBox>
+                {e.receipt_url&&<img src={e.receipt_url} alt='' style={{width:36,height:36,objectFit:'cover',borderRadius:8,flexShrink:0,border:'1px solid #DDD0BC'}} />}
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#1A1008'}}>{e.description}</div>
-                  <div style={{fontSize:12,color:'#8A7A60',marginTop:2}}>{e.entry_date} · {e.logged_by} · {e.payment_mode}</div>
-                  <div style={{fontFamily:'serif',fontSize:11,color:cat.color,marginTop:1}}>{cat.hi}</div>
+                  <div style={{fontSize:14,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#1A1008'}}>{cat.icon} {e.description}</div>
+                  <div style={{fontSize:12,color:'#8A7A60',marginTop:2}}>{cat.hi} · {e.entry_date} · {e.logged_by}</div>
                 </div>
-                <div style={{fontSize:15,fontWeight:700,color:e.type==='income'?'#2D8A5E':'#B04040',flexShrink:0,marginLeft:8}}>{e.type==='income'?'+':'−'}{fmt(e.amount)}</div>
+                <div style={{fontSize:15,fontWeight:700,color:e.type==='income'?'#2D8A5E':'#B04040',flexShrink:0}}>{e.type==='income'?'+':'−'}{fmt(e.amount)}</div>
+                <button onClick={()=>openEdit(e)} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 6px',fontSize:16,flexShrink:0,borderRadius:8,lineHeight:1,color:'#8A7A60'}}>✏️</button>
               </Row>
             )
           })}
@@ -460,17 +514,23 @@ function Ledger() {
       </div>
       <Sheet open={sh} onClose={()=>setSh(false)}>
         <STitle en='New Ledger Entry' hi='नई एंट्री दर्ज करें' />
-        <Field label='Type · प्रकार'><div style={{display:'flex',gap:8}}><TBtn label='↑ Income' active={form.type==='income'} onClick={()=>setForm({...form,type:'income'})} activeColor='#2D8A5E' activeBg='#EEF8F2' /><TBtn label='↓ Expense' active={form.type==='expense'} onClick={()=>setForm({...form,type:'expense'})} activeColor='#B04040' activeBg='#FFF5F5' /></div></Field>
-        <Field label='Category · श्रेणी'><div style={{display:'flex',flexWrap:'wrap',gap:7}}>{Object.entries(CAT).map(([k,v])=><button key={k} onClick={()=>setForm({...form,category:k})} style={{padding:'8px 13px',borderRadius:10,border:`1.5px solid ${form.category===k?v.color:'#DDD0BC'}`,background:form.category===k?v.color+'18':'transparent',color:form.category===k?v.color:'#6A5840',fontFamily:"'DM Sans',sans-serif",fontWeight:500,fontSize:14,cursor:'pointer',transition:'all .15s'}}>{v.icon} {v.label}</button>)}</div></Field>
-        <Field label='Amount · राशि (₹)'><Inp type='number' placeholder='0' style={{fontSize:26,fontWeight:700}} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} /></Field>
-        <Field label='Description · विवरण'><Inp placeholder='What was this for?' value={form.description} onChange={e=>setForm({...form,description:e.target.value})} /></Field>
-        <div style={{display:'flex',gap:10}}>
-          <Field label='Payment'><Sel value={form.payment_mode} onChange={e=>setForm({...form,payment_mode:e.target.value})} style={{fontSize:15}}>{['cash','upi','bank','credit'].map(p=><option key={p}>{p}</option>)}</Sel></Field>
-          <Field label='Logged by'><Sel value={form.logged_by} onChange={e=>setForm({...form,logged_by:e.target.value})} style={{fontSize:15}}>{['Papa','Mummy','You','Farm Hand'].map(u=><option key={u}>{u}</option>)}</Sel></Field>
-        </div>
+        {formFields()}
         <div style={{marginTop:8}}>
           <BtnGold full disabled={!form.amount||!form.description||saving} onClick={save}>{saving?'Saving...':'Save Entry · सहेजें'}</BtnGold>
           <BtnOutline full onClick={()=>setSh(false)} style={{marginTop:10}}>Cancel</BtnOutline>
+        </div>
+      </Sheet>
+      <Sheet open={editSh} onClose={()=>{setEditSh(false);setConfirmDel(false)}}>
+        <STitle en='Edit Entry' hi='एंट्री बदलें' />
+        {formFields()}
+        <div style={{marginBottom:12}}>
+          <button onClick={()=>editFileRef.current?.click()} style={{background:'#EDE6D8',border:'1px solid #DDD0BC',borderRadius:10,padding:'8px 14px',fontSize:14,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",fontWeight:600,color:'#6A5840'}}>{parsing?'⏳':'📷'} {form.receipt_url?'Replace Photo':'Add Photo'}</button>
+          <input ref={editFileRef} type='file' accept='image/*' capture='environment' style={{display:'none'}} onChange={e=>handlePhoto(e,true)} />
+        </div>
+        <div style={{marginTop:8}}>
+          <BtnGold full disabled={!form.amount||!form.description||saving} onClick={saveEdit}>{saving?'Saving...':'Update Entry · अपडेट करें'}</BtnGold>
+          <button onClick={doDelete} style={{width:'100%',marginTop:10,padding:'14px',borderRadius:14,border:`1.5px solid ${confirmDel?'#B04040':'#F5D0D0'}`,background:confirmDel?'#FFF5F5':'transparent',color:'#B04040',fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:15,cursor:'pointer',transition:'all .18s'}}>{confirmDel?'⚠️ Confirm Delete?':'🗑️ Delete Entry'}</button>
+          <BtnOutline full onClick={()=>{setEditSh(false);setConfirmDel(false)}} style={{marginTop:10}}>Cancel</BtnOutline>
         </div>
       </Sheet>
     </div>
