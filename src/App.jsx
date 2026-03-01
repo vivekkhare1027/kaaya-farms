@@ -8,6 +8,7 @@ import {
 const TODAY = new Date().toISOString().split('T')[0]
 const fmt   = n => `₹${Number(n).toLocaleString('en-IN')}`
 const LEDGER_INIT = {type:'expense',category:'dairy_feed',amount:'',description:'',payment_mode:'cash',entry_date:TODAY,logged_by:'Papa',receipt_url:''}
+const TASK_INIT   = {title:'',due_date:'',priority:'medium',assigned_to:'Papa',created_by:'You'}
 
 const CAT = {
   dairy_feed:   { icon:'🥛', label:'Dairy & Feed',   hi:'दूध/चारा',   color:'#2d8a5e' },
@@ -536,14 +537,44 @@ function Ledger() {
 }
 
 function Tasks() {
-  const { todos, addTodo, toggleTodo } = useTodos()
+  const { todos, addTodo, toggleTodo, updateTodo, deleteTodo } = useTodos()
   const [sh,setSh]=useState(false)
+  const [editSh,setEditSh]=useState(false)
+  const [editTodo,setEditTodo]=useState(null)
   const [filter,setFilter]=useState('pending')
   const [saving,setSaving]=useState(false)
-  const [form,setForm]=useState({title:'',due_date:'',priority:'medium',assigned_to:'Papa',created_by:'You'})
-  const save=async()=>{ if(!form.title) return; setSaving(true); const ok=await addTodo(form); setSaving(false); if(ok){setSh(false);setForm({title:'',due_date:'',priority:'medium',assigned_to:'Papa',created_by:'You'})} }
+  const [confirmDel,setConfirmDel]=useState(false)
+  const [form,setForm]=useState(TASK_INIT)
+
   const filtered=filter==='all'?todos:todos.filter(t=>t.status===filter)
   const pend=todos.filter(t=>t.status==='pending').length
+
+  const save=async()=>{ if(!form.title) return; setSaving(true); const ok=await addTodo(form); setSaving(false); if(ok){setSh(false);setForm(TASK_INIT)} }
+
+  const openEdit=(todo)=>{
+    setEditTodo(todo)
+    setForm({title:todo.title,due_date:todo.due_date||'',priority:todo.priority||'medium',assigned_to:todo.assigned_to||'Papa',created_by:todo.created_by||'You'})
+    setConfirmDel(false)
+    setEditSh(true)
+  }
+
+  const saveEdit=async()=>{ if(!editTodo) return; setSaving(true); const ok=await updateTodo(editTodo.id,{title:form.title,due_date:form.due_date,priority:form.priority,assigned_to:form.assigned_to}); setSaving(false); if(ok){setEditSh(false);setEditTodo(null)} }
+
+  const doDelete=async()=>{
+    if(!confirmDel){setConfirmDel(true);return}
+    setSaving(true); await deleteTodo(editTodo.id); setSaving(false)
+    setEditSh(false);setEditTodo(null);setConfirmDel(false)
+  }
+
+  const taskFormFields=()=>(
+    <>
+      <Field label='Task · काम'><Inp placeholder='e.g. Call the vet for Gauri' value={form.title} onChange={e=>setForm({...form,title:e.target.value})} /></Field>
+      <Field label='Due Date · तारीख'><Inp type='date' value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})} /></Field>
+      <Field label='Priority · प्राथमिकता'><div style={{display:'flex',gap:8}}><TBtn label='🔴 High' active={form.priority==='high'} onClick={()=>setForm({...form,priority:'high'})} activeColor='#B04040' activeBg='#FFF5F5' /><TBtn label='🟡 Medium' active={form.priority==='medium'} onClick={()=>setForm({...form,priority:'medium'})} activeColor='#B87820' activeBg='#FDF5E0' /><TBtn label='🟢 Low' active={form.priority==='low'} onClick={()=>setForm({...form,priority:'low'})} activeColor='#2D8A5E' activeBg='#EEF8F2' /></div></Field>
+      <Field label='Assign to · सौंपें'><Sel value={form.assigned_to} onChange={e=>setForm({...form,assigned_to:e.target.value})} style={{fontSize:15}}>{['Papa','Mummy','You','Farm Hand'].map(u=><option key={u}>{u}</option>)}</Sel></Field>
+    </>
+  )
+
   return (
     <div style={{display:'flex',flexDirection:'column',overflow:'hidden'}}>
       <div style={{padding:'18px 20px 0',display:'flex',justifyContent:'space-between',alignItems:'flex-end',flexShrink:0}}>
@@ -551,7 +582,7 @@ function Tasks() {
           <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:700,color:'#1A1008'}}>Tasks</div>
           <div style={{fontFamily:'serif',fontSize:13,color:'#8A7A60',marginTop:3}}>काम की सूची</div>
         </div>
-        <BtnGold small onClick={()=>setSh(true)}>+ Add</BtnGold>
+        <BtnGold small onClick={()=>{setForm(TASK_INIT);setSh(true)}}>+ Add</BtnGold>
       </div>
       <div style={{overflowY:'auto',padding:'16px 20px 24px',display:'flex',flexDirection:'column',gap:10}}>
         <div style={{background:'linear-gradient(150deg,#1A3D28,#245A36)',borderRadius:20,padding:'20px 22px',display:'flex',justifyContent:'space-between',alignItems:'center',position:'relative',overflow:'hidden'}}>
@@ -587,6 +618,7 @@ function Tasks() {
                     <Badge color='#6A5840' bg='#F0E8DA'>👤 {t.assigned_to}</Badge>
                   </div>
                 </div>
+                <button onClick={()=>openEdit(t)} style={{background:'none',border:'none',cursor:'pointer',padding:'4px 6px',fontSize:16,flexShrink:0,borderRadius:8,lineHeight:1,color:'#8A7A60',marginTop:-2}}>✏️</button>
               </div>
             </Card>
           ))
@@ -594,16 +626,20 @@ function Tasks() {
       </div>
       <Sheet open={sh} onClose={()=>setSh(false)}>
         <STitle en='New Task' hi='नया काम जोड़ें' />
-        <Field label='Task · काम'><Inp placeholder='e.g. Call the vet for Gauri' value={form.title} onChange={e=>setForm({...form,title:e.target.value})} /></Field>
-        <Field label='Due Date · तारीख'><Inp type='date' value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})} /></Field>
-        <Field label='Priority · प्राथमिकता'><div style={{display:'flex',gap:8}}><TBtn label='🔴 High' active={form.priority==='high'} onClick={()=>setForm({...form,priority:'high'})} activeColor='#B04040' activeBg='#FFF5F5' /><TBtn label='🟡 Medium' active={form.priority==='medium'} onClick={()=>setForm({...form,priority:'medium'})} activeColor='#B87820' activeBg='#FDF5E0' /><TBtn label='🟢 Low' active={form.priority==='low'} onClick={()=>setForm({...form,priority:'low'})} activeColor='#2D8A5E' activeBg='#EEF8F2' /></div></Field>
-        <div style={{display:'flex',gap:10}}>
-          <Field label='Assign to'><Sel value={form.assigned_to} onChange={e=>setForm({...form,assigned_to:e.target.value})} style={{fontSize:15}}>{['Papa','Mummy','You','Farm Hand'].map(u=><option key={u}>{u}</option>)}</Sel></Field>
-          <Field label='Created by'><Sel value={form.created_by} onChange={e=>setForm({...form,created_by:e.target.value})} style={{fontSize:15}}>{['Papa','Mummy','You'].map(u=><option key={u}>{u}</option>)}</Sel></Field>
-        </div>
+        {taskFormFields()}
+        <Field label='Created by'><Sel value={form.created_by} onChange={e=>setForm({...form,created_by:e.target.value})} style={{fontSize:15}}>{['Papa','Mummy','You'].map(u=><option key={u}>{u}</option>)}</Sel></Field>
         <div style={{marginTop:16}}>
           <BtnGold full disabled={!form.title||saving} onClick={save}>{saving?'Adding...':'Add Task · जोड़ें'}</BtnGold>
           <BtnOutline full onClick={()=>setSh(false)} style={{marginTop:10}}>Cancel</BtnOutline>
+        </div>
+      </Sheet>
+      <Sheet open={editSh} onClose={()=>{setEditSh(false);setConfirmDel(false)}}>
+        <STitle en='Edit Task' hi='काम बदलें' />
+        {taskFormFields()}
+        <div style={{marginTop:16}}>
+          <BtnGold full disabled={!form.title||saving} onClick={saveEdit}>{saving?'Saving...':'Update Task · अपडेट करें'}</BtnGold>
+          <button onClick={doDelete} style={{width:'100%',marginTop:10,padding:'14px',borderRadius:14,border:`1.5px solid ${confirmDel?'#B04040':'#F5D0D0'}`,background:confirmDel?'#FFF5F5':'transparent',color:'#B04040',fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:15,cursor:'pointer',transition:'all .18s'}}>{confirmDel?'⚠️ Confirm Delete?':'🗑️ Delete Task'}</button>
+          <BtnOutline full onClick={()=>{setEditSh(false);setConfirmDel(false)}} style={{marginTop:10}}>Cancel</BtnOutline>
         </div>
       </Sheet>
     </div>

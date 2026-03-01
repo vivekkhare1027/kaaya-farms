@@ -303,14 +303,25 @@ export function useTodos() {
     return true
   }
 
+  const updateTodo = async (id, fields) => {
+    const { error } = await supabase
+      .from('todos')
+      .update(fields)
+      .eq('id', id)
+      .eq('farm_id', FARM_ID)
+    if (error) { log('updateTodo', error); return false }
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, ...fields } : t))
+    return true
+  }
+
   const deleteTodo = async (id) => {
-    const { error } = await supabase.from('todos').delete().eq('id', id)
+    const { error } = await supabase.from('todos').delete().eq('id', id).eq('farm_id', FARM_ID)
     if (error) { log('deleteTodo', error); return false }
     setTodos(prev => prev.filter(t => t.id !== id))
     return true
   }
 
-  return { todos, loading, addTodo, toggleTodo, deleteTodo }
+  return { todos, loading, addTodo, toggleTodo, updateTodo, deleteTodo }
 }
 
 export function useAuth() {
