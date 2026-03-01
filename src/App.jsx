@@ -484,15 +484,13 @@ function Ledger() {
             <button key={k} onClick={()=>setFilter(k)} style={{flex:1,padding:'10px',border:'none',borderRadius:10,cursor:'pointer',background:filter===k?'#fff':'transparent',color:filter===k?'#1A1008':'#8A7A60',fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:14,boxShadow:filter===k?'0 2px 8px rgba(60,30,0,0.1)':'none',transition:'all .18s'}}>{l}</button>
           ))}
         </div>
-        {activeCats.length>0&&(
-          <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:2,scrollbarWidth:'none',msOverflowStyle:'none'}}>
-            <button onClick={()=>setCatFilter(null)} style={{flexShrink:0,padding:'6px 13px',borderRadius:20,border:`1.5px solid ${!catFilter?'#B87820':'#DDD0BC'}`,background:!catFilter?'rgba(184,120,32,0.1)':'transparent',color:!catFilter?'#B87820':'#8A7A60',fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:12,cursor:'pointer',whiteSpace:'nowrap',transition:'all .15s'}}>All Categories</button>
-            {activeCats.map(k=>{
-              const cat=CAT[k]; const active=catFilter===k
-              return <button key={k} onClick={()=>setCatFilter(active?null:k)} style={{flexShrink:0,padding:'6px 12px',borderRadius:20,border:`1.5px solid ${active?cat.color:'#DDD0BC'}`,background:active?cat.color+'18':'transparent',color:active?cat.color:'#8A7A60',fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:12,cursor:'pointer',whiteSpace:'nowrap',transition:'all .15s'}}>{cat.icon} {cat.label}</button>
-            })}
-          </div>
-        )}
+        <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:2,scrollbarWidth:'none',msOverflowStyle:'none'}}>
+          <button onClick={()=>setCatFilter(null)} style={{flexShrink:0,padding:'6px 13px',borderRadius:20,border:`1.5px solid ${!catFilter?'#B87820':'#DDD0BC'}`,background:!catFilter?'rgba(184,120,32,0.1)':'transparent',color:!catFilter?'#B87820':'#8A7A60',fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:12,cursor:'pointer',whiteSpace:'nowrap',transition:'all .15s'}}>All Categories</button>
+          {Object.keys(CAT).map(k=>{
+            const cat=CAT[k]; const active=catFilter===k; const hasEntries=activeCats.includes(k)
+            return <button key={k} onClick={()=>setCatFilter(active?null:k)} style={{flexShrink:0,padding:'6px 12px',borderRadius:20,border:`1.5px solid ${active?cat.color:'#DDD0BC'}`,background:active?cat.color+'18':'transparent',color:active?cat.color:hasEntries?'#3A2A10':'#B0A090',fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:12,cursor:'pointer',whiteSpace:'nowrap',transition:'all .15s',opacity:hasEntries?1:0.55}}>{cat.icon} {cat.label}</button>
+          })}
+        </div>
         <Card style={{padding:'4px 18px'}}>
           {list.length===0&&<div style={{padding:'20px 0',textAlign:'center',color:'#8A7A60',fontSize:14}}>No entries yet.</div>}
           {list.map((e,i)=>{
