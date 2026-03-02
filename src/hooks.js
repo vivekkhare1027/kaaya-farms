@@ -310,7 +310,9 @@ export function useTodos() {
       .eq('id', id)
       .eq('farm_id', FARM_ID)
     if (error) { log('updateTodo', error); return false }
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, ...fields } : t))
+    // Refetch authoritative data instead of optimistic patch to avoid
+    // racing with the realtime subscription's own fetch() call
+    await fetch()
     return true
   }
 
