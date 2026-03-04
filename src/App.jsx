@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Login from './Login'
 import {
   useAuth, useCattle, useMilkLogs, useHealthLogs,
@@ -121,6 +121,71 @@ function SubTabs({ tabs,active,setActive }) {
       {tabs.map(t=>(
         <button key={t.k} onClick={()=>setActive(t.k)} style={{flex:1,padding:'11px 6px',border:'none',borderRadius:11,fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:14,cursor:'pointer',transition:'all .2s',background:active===t.k?'#fff':'transparent',color:active===t.k?'#1A1008':'#8A7A60',boxShadow:active===t.k?'0 2px 10px rgba(60,30,0,0.1)':'none',display:'flex',alignItems:'center',justifyContent:'center',gap:5}}>{t.icon} {t.l}</button>
       ))}
+    </div>
+  )
+}
+
+// ── Responsive hook ─────────────────────────────────────────
+function useWindowSize() {
+  const [isDesktop, setIsDesktop] = useState(
+    typeof window !== 'undefined' ? window.innerWidth > 768 : false
+  )
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth > 768)
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+  return isDesktop
+}
+
+// ── Desktop Sidebar ──────────────────────────────────────────
+function Sidebar({ tab, setTab, onSignOut }) {
+  const items = [
+    { k:'home',   icon:'🏡', label:'Home',   hi:'होम'       },
+    { k:'dairy',  icon:'🐄', label:'Dairy',  hi:'डेयरी'     },
+    { k:'ledger', icon:'📒', label:'Ledger', hi:'बही-खाता'  },
+    { k:'tasks',  icon:'✅', label:'Tasks',  hi:'काम'       },
+  ]
+  return (
+    <div style={{width:260,flexShrink:0,background:'linear-gradient(180deg,#173322 0%,#1E4530 60%,#244D35 100%)',display:'flex',flexDirection:'column',height:'100vh',position:'sticky',top:0,overflow:'hidden'}}>
+      {/* Logo / brand */}
+      <div style={{padding:'28px 24px 20px',borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <div style={{width:46,height:46,borderRadius:14,background:'linear-gradient(135deg,#CF8A1C,#B87820)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,boxShadow:'0 4px 14px rgba(184,120,32,0.5)',flexShrink:0}}>🐄</div>
+          <div>
+            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:20,fontWeight:700,color:'#FFF8EE',lineHeight:1.1}}>Kaaya Farms</div>
+            <div style={{fontSize:10,color:'rgba(255,248,238,0.4)',letterSpacing:2,textTransform:'uppercase',marginTop:3}}>Lucknow · Est. 2020</div>
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:6,marginTop:14,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:16,padding:'6px 12px',width:'fit-content'}}>
+          <div style={{width:6,height:6,borderRadius:'50%',background:'#5FD4A0',boxShadow:'0 0 0 3px rgba(95,212,160,0.25)',animation:'pulse 2.5s infinite'}} />
+          <span style={{fontSize:10,color:'rgba(255,248,238,0.5)',letterSpacing:1,fontWeight:600}}>LIVE</span>
+        </div>
+      </div>
+      {/* Navigation items */}
+      <div style={{flex:1,padding:'16px 12px',display:'flex',flexDirection:'column',gap:4,overflowY:'auto'}}>
+        {items.map(it => {
+          const active = tab === it.k
+          return (
+            <button key={it.k} onClick={() => setTab(it.k)}
+              style={{display:'flex',alignItems:'center',gap:14,padding:'13px 16px',borderRadius:14,border:'none',background:active?'rgba(255,255,255,0.12)':'transparent',cursor:'pointer',transition:'all .18s',textAlign:'left',width:'100%',boxShadow:active?'0 2px 12px rgba(0,0,0,0.2)':'none',outline:'none'}}>
+              <div style={{width:36,height:36,borderRadius:10,fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',background:active?'rgba(184,120,32,0.25)':'rgba(255,255,255,0.06)',flexShrink:0,transition:'background .18s'}}>{it.icon}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:700,color:active?'#FFF8EE':'rgba(255,248,238,0.6)',fontFamily:"'DM Sans',sans-serif",letterSpacing:.2}}>{it.label}</div>
+                <div style={{fontSize:11,fontFamily:'serif',color:'rgba(255,248,238,0.3)',marginTop:1}}>{it.hi}</div>
+              </div>
+              {active && <div style={{width:4,height:24,borderRadius:2,background:'#CF8A1C',flexShrink:0}} />}
+            </button>
+          )
+        })}
+      </div>
+      {/* Sign out */}
+      <div style={{padding:'16px 12px',borderTop:'1px solid rgba(255,255,255,0.08)'}}>
+        <button onClick={onSignOut}
+          style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderRadius:14,border:'1px solid rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.05)',cursor:'pointer',width:'100%',transition:'all .18s',color:'rgba(255,248,238,0.5)',fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:600}}>
+          <span style={{fontSize:16}}>🚪</span> Sign out
+        </button>
+      </div>
     </div>
   )
 }
@@ -742,6 +807,8 @@ function Tasks() {
 export default function App() {
   const { user, loading, signOut } = useAuth()
   const [tab,setTab]=useState('home')
+  const isDesktop = useWindowSize()
+
   if (loading) {
     return (
       <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'100vh',background:'#F7F1E8',fontFamily:"'DM Sans',sans-serif"}}>
@@ -751,16 +818,38 @@ export default function App() {
     )
   }
   if (!user) return <Login />
+
+  const globalStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#F7F1E8;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;}
+    @keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(95,212,160,.5)}60%{box-shadow:0 0 0 5px rgba(95,212,160,0)}}
+    ::-webkit-scrollbar{width:0}
+  `
+
+  /* ── DESKTOP layout: sidebar + full-width content ── */
+  if (isDesktop) {
+    return (
+      <>
+        <style>{globalStyles}</style>
+        <div style={{display:'flex',height:'100vh',width:'100%',overflow:'hidden'}}>
+          <Sidebar tab={tab} setTab={setTab} onSignOut={signOut} />
+          <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column',background:'#F7F1E8'}}>
+            {tab==='home'   && <Home   nav={setTab} />}
+            {tab==='dairy'  && <Dairy  />}
+            {tab==='ledger' && <Ledger />}
+            {tab==='tasks'  && <Tasks  />}
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  /* ── MOBILE layout: unchanged ── */
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0;}
-        body{background:#F7F1E8;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;}
-        @keyframes sheetUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(95,212,160,.5)}60%{box-shadow:0 0 0 5px rgba(95,212,160,0)}}
-        ::-webkit-scrollbar{width:0}
-      `}</style>
+      <style>{globalStyles}</style>
       <div style={{maxWidth:460,margin:'0 auto',height:'100vh',display:'flex',flexDirection:'column',background:'#F7F1E8',overflow:'hidden',boxShadow:'0 0 60px rgba(0,0,0,0.15)'}}>
         <Header onSignOut={signOut} />
         <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
