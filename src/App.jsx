@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import Login from './Login'
+import Projects from './components/Projects'
 import {
   useAuth, useCattle, useMilkLogs, useHealthLogs,
   useFeed, useLedger, useTodos
@@ -141,10 +142,11 @@ function useWindowSize() {
 // ── Desktop Sidebar ──────────────────────────────────────────
 function Sidebar({ tab, setTab, onSignOut }) {
   const items = [
-    { k:'home',   icon:'🏡', label:'Home',   hi:'होम'       },
-    { k:'dairy',  icon:'🐄', label:'Dairy',  hi:'डेयरी'     },
-    { k:'ledger', icon:'📒', label:'Ledger', hi:'बही-खाता'  },
-    { k:'tasks',  icon:'✅', label:'Tasks',  hi:'काम'       },
+    { k:'home',     icon:'🏡', label:'Home',     hi:'होम'        },
+    { k:'dairy',    icon:'🐄', label:'Dairy',    hi:'डेयरी'      },
+    { k:'ledger',   icon:'📒', label:'Ledger',   hi:'बही-खाता'   },
+    { k:'projects', icon:'🏗️', label:'Projects', hi:'परियोजनाएँ' },
+    { k:'tasks',    icon:'✅', label:'Tasks',    hi:'काम'        },
   ]
   return (
     <div style={{width:260,flexShrink:0,background:'linear-gradient(180deg,#173322 0%,#1E4530 60%,#244D35 100%)',display:'flex',flexDirection:'column',height:'100vh',position:'sticky',top:0,overflow:'hidden'}}>
@@ -216,7 +218,7 @@ function Header({ onSignOut }) {
 }
 
 function Nav({ tab,setTab }) {
-  const items=[{k:'home',icon:'🏡',label:'Home'},{k:'dairy',icon:'🐄',label:'Dairy'},{k:'ledger',icon:'📒',label:'Ledger'},{k:'tasks',icon:'✅',label:'Tasks'}]
+  const items=[{k:'home',icon:'🏡',label:'Home'},{k:'dairy',icon:'🐄',label:'Dairy'},{k:'ledger',icon:'📒',label:'Ledger'},{k:'projects',icon:'🏗️',label:'Projects'},{k:'tasks',icon:'✅',label:'Tasks'}]
   return (
     <div style={{display:'flex',background:'rgba(254,250,244,0.97)',backdropFilter:'blur(16px)',borderTop:'1px solid #EBE2D2',padding:'6px 8px 10px',flexShrink:0}}>
       {items.map(it=>(
@@ -836,10 +838,11 @@ export default function App() {
         <div style={{display:'flex',height:'100vh',width:'100%',overflow:'hidden'}}>
           <Sidebar tab={tab} setTab={setTab} onSignOut={signOut} />
           <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column',background:'#F7F1E8'}}>
-            {tab==='home'   && <Home   nav={setTab} />}
-            {tab==='dairy'  && <Dairy  />}
-            {tab==='ledger' && <Ledger />}
-            {tab==='tasks'  && <Tasks  />}
+            {tab==='home'     && <Home     nav={setTab} />}
+            {tab==='dairy'    && <Dairy    />}
+            {tab==='ledger'   && <Ledger   />}
+            {tab==='projects' && <Projects />}
+            {tab==='tasks'    && <Tasks    />}
           </div>
         </div>
       </>
@@ -853,10 +856,11 @@ export default function App() {
       <div style={{maxWidth:460,margin:'0 auto',height:'100vh',display:'flex',flexDirection:'column',background:'#F7F1E8',overflow:'hidden',boxShadow:'0 0 60px rgba(0,0,0,0.15)'}}>
         <Header onSignOut={signOut} />
         <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-          {tab==='home'   && <Home   nav={setTab} />}
-          {tab==='dairy'  && <Dairy  />}
-          {tab==='ledger' && <Ledger />}
-          {tab==='tasks'  && <Tasks  />}
+          {tab==='home'     && <Home     nav={setTab} />}
+          {tab==='dairy'    && <Dairy    />}
+          {tab==='ledger'   && <Ledger   />}
+          {tab==='projects' && <Projects />}
+          {tab==='tasks'    && <Tasks    />}
         </div>
         <Nav tab={tab} setTab={setTab} />
       </div>

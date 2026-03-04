@@ -334,6 +334,104 @@ export function useTodos() {
   return { todos, loading, addTodo, toggleTodo, updateTodo, deleteTodo }
 }
 
+export function useProjects() {
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetch = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('farm_id', FARM_ID)
+      .order('created_at', { ascending: false })
+    if (error) log('useProjects.fetch', error)
+    else setProjects(data || [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetch()
+    const channel = supabase
+      .channel('projects-changes')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'projects',
+        filter: `farm_id=eq.${FARM_ID}`
+      }, fetch)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [fetch])
+
+  const addProject = async (fields) => {
+    const { error } = await supabase
+      .from('projects')
+      .insert([{ ...fields, farm_id: FARM_ID }])
+    if (error) { log('addProject', error); return { ok: false, error: error.message } }
+    return { ok: true }
+  }
+
+  const updateProject = async (id, fields) => {
+    const { error } = await supabase
+      .from('projects')
+      .update(fields)
+      .eq('id', id)
+      .eq('farm_id', FARM_ID)
+    if (error) { log('updateProject', error); return { ok: false, error: error.message } }
+    await fetch()
+    return { ok: true }
+  }
+
+  return { projects, loading, addProject, updateProject, refetch: fetch }
+}
+
+export function useProjectExpenses(projectId) {
+  const [expenses, setExpenses] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetch = useCallback(async () => {
+    if (!projectId) { setExpenses([]); setLoading(false); return }
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('project_expenses')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('farm_id', FARM_ID)
+      .order('date', { ascending: false })
+    if (error) log('useProjectExpenses.fetch', error)
+    else setExpenses(data || [])
+    setLoading(false)
+  }, [projectId])
+
+  useEffect(() => { fetch() }, [fetch])
+
+  const addExpense = async (fields) => {
+    // Insert into project_expenses
+    const { error } = await supabase
+      .from('project_expenses')
+      .insert([{ ...fields, project_id: projectId, farm_id: FARM_ID }])
+    if (error) { log('addProjectExpense', error); return { ok: false, error: error.message } }
+    // Mirror to ledger_entries
+    const { error: ledgerErr } = await supabase
+      .from('ledger_entries')
+      .insert([{
+        farm_id: FARM_ID,
+        type: 'expense',
+        category: fields.category || 'construction',
+        amount: fields.amount,
+        description: `[Project] ${fields.party_name || ''}${fields.notes ? ' — ' + fields.notes : ''}`,
+        payment_mode: fields.payment_mode || 'cash',
+        entry_date: fields.date,
+        logged_by: 'Papa',
+        project_id: projectId,
+      }])
+    if (ledgerErr) log('mirrorToLedger', ledgerErr)
+    await fetch()
+    return { ok: true }
+  }
+
+  return { expenses, loading, addExpense, refetch: fetch }
+}
+
 export function useAuth() {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
