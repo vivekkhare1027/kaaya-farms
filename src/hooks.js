@@ -40,8 +40,8 @@ export function useCattle() {
     const { error } = await supabase
       .from('cattle')
       .insert([{ ...fields, farm_id: FARM_ID }])
-    if (error) { log('addCattle', error); return false }
-    return true
+    if (error) { log('addCattle', error); return { ok: false, error: error.message } }
+    return { ok: true }
   }
 
   return { cattle, loading, addCattle, refetch: fetch }
@@ -81,8 +81,8 @@ export function useMilkLogs() {
     const { error } = await supabase
       .from('milk_yield_logs')
       .insert([{ farm_id: FARM_ID, cattle_id, session, qty_liters, logged_by, yield_date }])
-    if (error) { log('addMilkLog', error); return false }
-    return true
+    if (error) { log('addMilkLog', error); return { ok: false, error: error.message } }
+    return { ok: true }
   }
 
   return { logs, loading, addLog, refetch: fetch }
@@ -121,8 +121,8 @@ export function useHealthLogs() {
     const { error } = await supabase
       .from('cattle_health_logs')
       .insert([{ ...fields, farm_id: FARM_ID }])
-    if (error) { log('addHealthLog', error); return false }
-    return true
+    if (error) { log('addHealthLog', error); return { ok: false, error: error.message } }
+    return { ok: true }
   }
 
   return { logs, loading, addLog }
@@ -160,8 +160,8 @@ export function useFeed() {
     const { error } = await supabase
       .from('feed_inventory')
       .insert([{ farm_id: FARM_ID, item_name, unit, stock, reorder_at }])
-    if (error) { log('addFeedItem', error); return false }
-    return true
+    if (error) { log('addFeedItem', error); return { ok: false, error: error.message } }
+    return { ok: true }
   }
 
   const updateStock = async (id, newStock) => {
@@ -169,8 +169,8 @@ export function useFeed() {
       .from('feed_inventory')
       .update({ stock: newStock, updated_at: new Date().toISOString() })
       .eq('id', id)
-    if (error) { log('updateStock', error); return false }
-    return true
+    if (error) { log('updateStock', error); return { ok: false, error: error.message } }
+    return { ok: true }
   }
 
   return { feed, loading, addItem, updateStock }
@@ -210,8 +210,8 @@ export function useLedger() {
     const { error } = await supabase
       .from('ledger_entries')
       .insert([{ ...fields, farm_id: FARM_ID }])
-    if (error) { log('addLedgerEntry', error); return false }
-    return true
+    if (error) { log('addLedgerEntry', error); return { ok: false, error: error.message } }
+    return { ok: true }
   }
 
   const updateEntry = async (id, fields) => {
@@ -220,9 +220,9 @@ export function useLedger() {
       .update(fields)
       .eq('id', id)
       .eq('farm_id', FARM_ID)
-    if (error) { log('updateLedgerEntry', error); return false }
+    if (error) { log('updateLedgerEntry', error); return { ok: false, error: error.message } }
     setEntries(prev => prev.map(e => e.id === id ? { ...e, ...fields } : e))
-    return true
+    return { ok: true }
   }
 
   const deleteEntry = async (id) => {
@@ -231,9 +231,9 @@ export function useLedger() {
       .delete()
       .eq('id', id)
       .eq('farm_id', FARM_ID)
-    if (error) { log('deleteLedgerEntry', error); return false }
+    if (error) { log('deleteLedgerEntry', error); return { ok: false, error: error.message } }
     setEntries(prev => prev.filter(e => e.id !== id))
-    return true
+    return { ok: true }
   }
 
   const uploadReceipt = async (file) => {
@@ -260,10 +260,17 @@ export function useTodos() {
       .from('todos')
       .select('*')
       .eq('farm_id', FARM_ID)
-      .order('priority', { ascending: true })
-      .order('due_date',  { ascending: true })
+      .order('due_date', { ascending: true })
     if (error) log('useTodos.fetch', error)
-    else setTodos(data || [])
+    else {
+      // Sort semantically: high → medium → low, then by due_date
+      const RANK = { high: 0, medium: 1, low: 2 }
+      const sorted = (data || []).sort((a, b) =>
+        (RANK[a.priority] ?? 3) - (RANK[b.priority] ?? 3) ||
+        (a.due_date || '').localeCompare(b.due_date || '')
+      )
+      setTodos(sorted)
+    }
     setLoading(false)
   }, [])
 
@@ -283,8 +290,8 @@ export function useTodos() {
     const { error } = await supabase
       .from('todos')
       .insert([{ ...fields, farm_id: FARM_ID, status: 'pending' }])
-    if (error) { log('addTodo', error); return false }
-    return true
+    if (error) { log('addTodo', error); return { ok: false, error: error.message } }
+    return { ok: true }
   }
 
   const toggleTodo = async (id, currentStatus) => {
@@ -296,11 +303,12 @@ export function useTodos() {
         completed_at: isDone ? null : new Date().toISOString()
       })
       .eq('id', id)
-    if (error) { log('toggleTodo', error); return false }
+      .eq('farm_id', FARM_ID)
+    if (error) { log('toggleTodo', error); return { ok: false, error: error.message } }
     setTodos(prev => prev.map(t =>
       t.id === id ? { ...t, status: isDone ? 'pending' : 'done' } : t
     ))
-    return true
+    return { ok: true }
   }
 
   const updateTodo = async (id, fields) => {
@@ -309,18 +317,18 @@ export function useTodos() {
       .update(fields)
       .eq('id', id)
       .eq('farm_id', FARM_ID)
-    if (error) { log('updateTodo', error); return false }
+    if (error) { log('updateTodo', error); return { ok: false, error: error.message } }
     // Refetch authoritative data instead of optimistic patch to avoid
     // racing with the realtime subscription's own fetch() call
     await fetch()
-    return true
+    return { ok: true }
   }
 
   const deleteTodo = async (id) => {
     const { error } = await supabase.from('todos').delete().eq('id', id).eq('farm_id', FARM_ID)
-    if (error) { log('deleteTodo', error); return false }
+    if (error) { log('deleteTodo', error); return { ok: false, error: error.message } }
     setTodos(prev => prev.filter(t => t.id !== id))
-    return true
+    return { ok: true }
   }
 
   return { todos, loading, addTodo, toggleTodo, updateTodo, deleteTodo }

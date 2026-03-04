@@ -251,7 +251,7 @@ function Home({ nav }) {
 }
 
 function Dairy() {
-  const { cattle }                              = useCattle()
+  const { cattle, addCattle }                   = useCattle()
   const { logs:milkLogs, addLog:addMilk }       = useMilkLogs()
   const { logs:healthLogs, addLog:addHealth }   = useHealthLogs()
   const { feed, addItem:addFeed }               = useFeed()
@@ -259,14 +259,46 @@ function Dairy() {
   const [mSh,setMSh]=useState(false)
   const [hSh,setHSh]=useState(false)
   const [fSh,setFSh]=useState(false)
+  const [cSh,setCSh]=useState(false)
   const [mf,setMf]=useState({cattle_id:'',session:'morning',qty_liters:'',logged_by:'Papa',yield_date:TODAY})
   const [hf,setHf]=useState({cattle_id:'',event_type:'checkup',description:'',vet_name:'',next_due:''})
   const [ff,setFf]=useState({item_name:'',unit:'kg',stock:'',reorder_at:''})
+  const [cf,setCf]=useState({name:'',tag:'',breed:'',dob:''})
   const [saving,setSaving]=useState(false)
+  const [errMsg,setErrMsg]=useState('')
   const todayMilk=milkLogs.filter(l=>l.yield_date===TODAY).reduce((s,l)=>s+(l.qty_liters||0),0)
-  const saveMilk=async()=>{ if(!mf.cattle_id||!mf.qty_liters) return; setSaving(true); const ok=await addMilk({...mf,qty_liters:parseFloat(mf.qty_liters)}); setSaving(false); if(ok){setMSh(false);setMf({cattle_id:'',session:'morning',qty_liters:'',logged_by:'Papa',yield_date:TODAY})} }
-  const saveHealth=async()=>{ if(!hf.cattle_id||!hf.description) return; setSaving(true); const ok=await addHealth({...hf,log_date:TODAY}); setSaving(false); if(ok){setHSh(false);setHf({cattle_id:'',event_type:'checkup',description:'',vet_name:'',next_due:''})} }
-  const saveFeed=async()=>{ if(!ff.item_name) return; setSaving(true); const ok=await addFeed({...ff,stock:parseFloat(ff.stock),reorder_at:parseFloat(ff.reorder_at)}); setSaving(false); if(ok){setFSh(false);setFf({item_name:'',unit:'kg',stock:'',reorder_at:''})} }
+  const saveMilk=async()=>{
+    if(!mf.cattle_id||!mf.qty_liters||isNaN(parseFloat(mf.qty_liters))) return
+    setSaving(true); setErrMsg('')
+    const {ok,error}=await addMilk({...mf,qty_liters:parseFloat(mf.qty_liters)})
+    setSaving(false)
+    if(ok){setMSh(false);setMf({cattle_id:'',session:'morning',qty_liters:'',logged_by:'Papa',yield_date:TODAY})}
+    else setErrMsg(error||'Failed to save milk log')
+  }
+  const saveHealth=async()=>{
+    if(!hf.cattle_id||!hf.description) return
+    setSaving(true); setErrMsg('')
+    const {ok,error}=await addHealth({...hf,log_date:TODAY})
+    setSaving(false)
+    if(ok){setHSh(false);setHf({cattle_id:'',event_type:'checkup',description:'',vet_name:'',next_due:''})}
+    else setErrMsg(error||'Failed to save health log')
+  }
+  const saveFeed=async()=>{
+    if(!ff.item_name) return
+    setSaving(true); setErrMsg('')
+    const {ok,error}=await addFeed({...ff,stock:parseFloat(ff.stock)||0,reorder_at:parseFloat(ff.reorder_at)||0})
+    setSaving(false)
+    if(ok){setFSh(false);setFf({item_name:'',unit:'kg',stock:'',reorder_at:''})}
+    else setErrMsg(error||'Failed to save feed item')
+  }
+  const saveCattle=async()=>{
+    if(!cf.name) return
+    setSaving(true); setErrMsg('')
+    const {ok,error}=await addCattle({...cf,status:'active'})
+    setSaving(false)
+    if(ok){setCSh(false);setCf({name:'',tag:'',breed:'',dob:''})}
+    else setErrMsg(error||'Failed to register animal')
+  }
   const onAdd=()=>{ if(sub==='milk') setMSh(true); else if(sub==='health') setHSh(true); else setFSh(true) }
   return (
     <div style={{display:'flex',flexDirection:'column',overflow:'hidden'}}>
@@ -302,7 +334,10 @@ function Dairy() {
           </Card>
         </>}
         {sub==='health'&&<>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:'#8A7A60'}}>Cattle Registry · पशु सूची</div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:'#8A7A60'}}>Cattle Registry · पशु सूची</div>
+            <button onClick={()=>{setCf({name:'',tag:'',breed:'',dob:''});setErrMsg('');setCSh(true)}} style={{background:'#EDE6D8',border:'1px solid #DDD0BC',borderRadius:10,padding:'5px 11px',fontSize:12,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",fontWeight:600,color:'#6A5840'}}>+ Add Animal</button>
+          </div>
           <Card style={{padding:'4px 18px'}}>
             {cattle.length===0&&<div style={{padding:'20px 0',textAlign:'center',color:'#8A7A60',fontSize:14}}>No cattle registered yet.</div>}
             {cattle.map((c,i)=>(
@@ -360,38 +395,53 @@ function Dairy() {
           )
         })}
       </div>
-      <Sheet open={mSh} onClose={()=>setMSh(false)}>
+      <Sheet open={mSh} onClose={()=>{setMSh(false);setErrMsg('')}}>
         <STitle en='Log Milk Yield' hi='दूध उत्पादन दर्ज करें' />
         <Field label='Cattle · पशु'><Sel value={mf.cattle_id} onChange={e=>setMf({...mf,cattle_id:e.target.value})}><option value=''>— Select animal —</option>{cattle.map(c=><option key={c.id} value={c.id}>{c.name} — {c.breed}</option>)}</Sel></Field>
         <Field label='Session · समय'><div style={{display:'flex',gap:8}}><TBtn label='🌅 Morning' active={mf.session==='morning'} onClick={()=>setMf({...mf,session:'morning'})} /><TBtn label='🌙 Evening' active={mf.session==='evening'} onClick={()=>setMf({...mf,session:'evening'})} /></div></Field>
-        <Field label='Litres · लीटर'><Inp type='number' placeholder='e.g. 8.5' style={{fontSize:26,fontWeight:700}} value={mf.qty_liters} onChange={e=>setMf({...mf,qty_liters:e.target.value})} /></Field>
+        <Field label='Litres · लीटर'><Inp type='number' min='0' placeholder='e.g. 8.5' style={{fontSize:26,fontWeight:700}} value={mf.qty_liters} onChange={e=>setMf({...mf,qty_liters:e.target.value})} /></Field>
         <Field label='Logged by · किसने'><Sel value={mf.logged_by} onChange={e=>setMf({...mf,logged_by:e.target.value})}>{['Papa','Mummy','You','Farm Hand'].map(u=><option key={u}>{u}</option>)}</Sel></Field>
+        {errMsg&&<div style={{background:'#FFF5F5',border:'1px solid #F5D0D0',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#B04040',marginBottom:12}}>⚠️ {errMsg}</div>}
         <div style={{marginTop:8}}>
-          <BtnGold full disabled={!mf.cattle_id||!mf.qty_liters||saving} onClick={saveMilk}>{saving?'Saving...':'Save Entry · सहेजें'}</BtnGold>
-          <BtnOutline full onClick={()=>setMSh(false)} style={{marginTop:10}}>Cancel</BtnOutline>
+          <BtnGold full disabled={!mf.cattle_id||!mf.qty_liters||isNaN(parseFloat(mf.qty_liters))||saving} onClick={saveMilk}>{saving?'Saving...':'Save Entry · सहेजें'}</BtnGold>
+          <BtnOutline full onClick={()=>{setMSh(false);setErrMsg('')}} style={{marginTop:10}}>Cancel</BtnOutline>
         </div>
       </Sheet>
-      <Sheet open={hSh} onClose={()=>setHSh(false)}>
+      <Sheet open={hSh} onClose={()=>{setHSh(false);setErrMsg('')}}>
         <STitle en='Health Log' hi='स्वास्थ्य रिकॉर्ड' />
         <Field label='Cattle · पशु'><Sel value={hf.cattle_id} onChange={e=>setHf({...hf,cattle_id:e.target.value})}><option value=''>— Select animal —</option>{cattle.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</Sel></Field>
         <Field label='Event Type · प्रकार'><Sel value={hf.event_type} onChange={e=>setHf({...hf,event_type:e.target.value})}>{Object.entries(HEVT).map(([k,v])=><option key={k} value={k}>{v.icon} {v.label}</option>)}</Sel></Field>
         <Field label='Description · विवरण'><Txta rows={3} placeholder='Describe the event...' value={hf.description} onChange={e=>setHf({...hf,description:e.target.value})} /></Field>
         <Field label='Vet Name · पशु चिकित्सक'><Inp placeholder='Dr. Mehta' value={hf.vet_name} onChange={e=>setHf({...hf,vet_name:e.target.value})} /></Field>
         <Field label='Next Due Date · अगली तारीख'><Inp type='date' value={hf.next_due} onChange={e=>setHf({...hf,next_due:e.target.value})} /></Field>
+        {errMsg&&<div style={{background:'#FFF5F5',border:'1px solid #F5D0D0',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#B04040',marginBottom:12}}>⚠️ {errMsg}</div>}
         <div style={{marginTop:8}}>
           <BtnGold full disabled={!hf.cattle_id||!hf.description||saving} onClick={saveHealth}>{saving?'Saving...':'Save · सहेजें'}</BtnGold>
-          <BtnOutline full onClick={()=>setHSh(false)} style={{marginTop:10}}>Cancel</BtnOutline>
+          <BtnOutline full onClick={()=>{setHSh(false);setErrMsg('')}} style={{marginTop:10}}>Cancel</BtnOutline>
         </div>
       </Sheet>
-      <Sheet open={fSh} onClose={()=>setFSh(false)}>
+      <Sheet open={fSh} onClose={()=>{setFSh(false);setErrMsg('')}}>
         <STitle en='Add Feed Item' hi='चारा जोड़ें' />
         <Field label='Item Name · नाम'><Inp placeholder='Mustard Cake' value={ff.item_name} onChange={e=>setFf({...ff,item_name:e.target.value})} /></Field>
         <Field label='Unit · इकाई'><Sel value={ff.unit} onChange={e=>setFf({...ff,unit:e.target.value})}>{['kg','quintal','bale','liters'].map(u=><option key={u}>{u}</option>)}</Sel></Field>
-        <Field label='Current Stock · वर्तमान'><Inp type='number' placeholder='0' value={ff.stock} onChange={e=>setFf({...ff,stock:e.target.value})} /></Field>
-        <Field label='Reorder Level · न्यूनतम'><Inp type='number' placeholder='0' value={ff.reorder_at} onChange={e=>setFf({...ff,reorder_at:e.target.value})} /></Field>
+        <Field label='Current Stock · वर्तमान'><Inp type='number' min='0' placeholder='0' value={ff.stock} onChange={e=>setFf({...ff,stock:e.target.value})} /></Field>
+        <Field label='Reorder Level · न्यूनतम'><Inp type='number' min='0' placeholder='0' value={ff.reorder_at} onChange={e=>setFf({...ff,reorder_at:e.target.value})} /></Field>
+        {errMsg&&<div style={{background:'#FFF5F5',border:'1px solid #F5D0D0',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#B04040',marginBottom:12}}>⚠️ {errMsg}</div>}
         <div style={{marginTop:8}}>
           <BtnGold full disabled={!ff.item_name||saving} onClick={saveFeed}>{saving?'Saving...':'Save · सहेजें'}</BtnGold>
-          <BtnOutline full onClick={()=>setFSh(false)} style={{marginTop:10}}>Cancel</BtnOutline>
+          <BtnOutline full onClick={()=>{setFSh(false);setErrMsg('')}} style={{marginTop:10}}>Cancel</BtnOutline>
+        </div>
+      </Sheet>
+      <Sheet open={cSh} onClose={()=>{setCSh(false);setErrMsg('')}}>
+        <STitle en='Register Animal' hi='पशु पंजीकरण' />
+        <Field label='Name · नाम'><Inp placeholder='e.g. Gauri' value={cf.name} onChange={e=>setCf({...cf,name:e.target.value})} /></Field>
+        <Field label='Tag / ID · टैग'><Inp placeholder='e.g. KF-001' value={cf.tag} onChange={e=>setCf({...cf,tag:e.target.value})} /></Field>
+        <Field label='Breed · नस्ल'><Inp placeholder='e.g. HF Cross' value={cf.breed} onChange={e=>setCf({...cf,breed:e.target.value})} /></Field>
+        <Field label='Date of Birth · जन्म तिथि'><Inp type='date' value={cf.dob} onChange={e=>setCf({...cf,dob:e.target.value})} /></Field>
+        {errMsg&&<div style={{background:'#FFF5F5',border:'1px solid #F5D0D0',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#B04040',marginBottom:12}}>⚠️ {errMsg}</div>}
+        <div style={{marginTop:8}}>
+          <BtnGold full disabled={!cf.name||saving} onClick={saveCattle}>{saving?'Saving...':'Register · पंजीकरण करें'}</BtnGold>
+          <BtnOutline full onClick={()=>{setCSh(false);setErrMsg('')}} style={{marginTop:10}}>Cancel</BtnOutline>
         </div>
       </Sheet>
     </div>
@@ -408,6 +458,7 @@ function Ledger() {
   const [parsing,setParsing]=useState(false)
   const [saving,setSaving]=useState(false)
   const [confirmDel,setConfirmDel]=useState(false)
+  const [errMsg,setErrMsg]=useState('')
   const fileRef=useRef()
   const editFileRef=useRef()
   const [form,setForm]=useState(LEDGER_INIT)
@@ -417,22 +468,39 @@ function Ledger() {
   const typeFiltered=filter==='all'?entries:entries.filter(e=>e.type===filter)
   const list=catFilter?typeFiltered.filter(e=>e.category===catFilter):typeFiltered
   const activeCats=Object.keys(CAT).filter(k=>entries.some(e=>e.category===k))
+  const amountValid=!isNaN(parseFloat(form.amount))&&parseFloat(form.amount)>0
 
-  const save=async()=>{ setSaving(true); const ok=await addEntry({...form,amount:parseFloat(form.amount)}); setSaving(false); if(ok){setSh(false);setForm(LEDGER_INIT)} }
+  const save=async()=>{
+    setSaving(true); setErrMsg('')
+    const {ok,error}=await addEntry({...form,amount:parseFloat(form.amount)})
+    setSaving(false)
+    if(ok){setSh(false);setForm(LEDGER_INIT)}
+    else setErrMsg(error||'Failed to save entry')
+  }
 
   const openEdit=(entry)=>{
     setEditEntry(entry)
     setForm({type:entry.type,category:entry.category||'other',amount:String(entry.amount),description:entry.description||'',payment_mode:entry.payment_mode||'cash',entry_date:entry.entry_date||TODAY,logged_by:entry.logged_by||'Papa',receipt_url:entry.receipt_url||''})
-    setConfirmDel(false)
+    setConfirmDel(false); setErrMsg('')
     setEditSh(true)
   }
 
-  const saveEdit=async()=>{ if(!editEntry) return; setSaving(true); const ok=await updateEntry(editEntry.id,{...form,amount:parseFloat(form.amount)}); setSaving(false); if(ok){setEditSh(false);setEditEntry(null)} }
+  const saveEdit=async()=>{
+    if(!editEntry) return
+    setSaving(true); setErrMsg('')
+    const {ok,error}=await updateEntry(editEntry.id,{...form,amount:parseFloat(form.amount)})
+    setSaving(false)
+    if(ok){setEditSh(false);setEditEntry(null)}
+    else setErrMsg(error||'Failed to update entry')
+  }
 
   const doDelete=async()=>{
     if(!confirmDel){setConfirmDel(true);return}
-    setSaving(true); await deleteEntry(editEntry.id); setSaving(false)
-    setEditSh(false);setEditEntry(null);setConfirmDel(false)
+    setSaving(true); setErrMsg('')
+    const {ok,error}=await deleteEntry(editEntry.id)
+    setSaving(false)
+    if(ok){setEditSh(false);setEditEntry(null);setConfirmDel(false)}
+    else setErrMsg(error||'Failed to delete entry')
   }
 
   const handlePhoto=async(e,isEdit)=>{ const file=e.target.files[0]; if(!file) return; setParsing(true); const url=await uploadReceipt(file); setForm(f=>({...f,receipt_url:url||''})); setParsing(false); if(!isEdit) setSh(true) }
@@ -511,25 +579,27 @@ function Ledger() {
           })}
         </Card>
       </div>
-      <Sheet open={sh} onClose={()=>setSh(false)}>
+      <Sheet open={sh} onClose={()=>{setSh(false);setErrMsg('')}}>
         <STitle en='New Ledger Entry' hi='नई एंट्री दर्ज करें' />
         {formFields()}
+        {errMsg&&<div style={{background:'#FFF5F5',border:'1px solid #F5D0D0',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#B04040',marginBottom:12}}>⚠️ {errMsg}</div>}
         <div style={{marginTop:8}}>
-          <BtnGold full disabled={!form.amount||!form.description||saving} onClick={save}>{saving?'Saving...':'Save Entry · सहेजें'}</BtnGold>
-          <BtnOutline full onClick={()=>setSh(false)} style={{marginTop:10}}>Cancel</BtnOutline>
+          <BtnGold full disabled={!amountValid||!form.description||saving} onClick={save}>{saving?'Saving...':'Save Entry · सहेजें'}</BtnGold>
+          <BtnOutline full onClick={()=>{setSh(false);setErrMsg('')}} style={{marginTop:10}}>Cancel</BtnOutline>
         </div>
       </Sheet>
-      <Sheet open={editSh} onClose={()=>{setEditSh(false);setConfirmDel(false)}}>
+      <Sheet open={editSh} onClose={()=>{setEditSh(false);setConfirmDel(false);setErrMsg('')}}>
         <STitle en='Edit Entry' hi='एंट्री बदलें' />
         {formFields()}
         <div style={{marginBottom:12}}>
           <button onClick={()=>editFileRef.current?.click()} style={{background:'#EDE6D8',border:'1px solid #DDD0BC',borderRadius:10,padding:'8px 14px',fontSize:14,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",fontWeight:600,color:'#6A5840'}}>{parsing?'⏳':'📷'} {form.receipt_url?'Replace Photo':'Add Photo'}</button>
           <input ref={editFileRef} type='file' accept='image/*' capture='environment' style={{display:'none'}} onChange={e=>handlePhoto(e,true)} />
         </div>
+        {errMsg&&<div style={{background:'#FFF5F5',border:'1px solid #F5D0D0',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#B04040',marginBottom:12}}>⚠️ {errMsg}</div>}
         <div style={{marginTop:8}}>
-          <BtnGold full disabled={!form.amount||!form.description||saving} onClick={saveEdit}>{saving?'Saving...':'Update Entry · अपडेट करें'}</BtnGold>
+          <BtnGold full disabled={!amountValid||!form.description||saving} onClick={saveEdit}>{saving?'Saving...':'Update Entry · अपडेट करें'}</BtnGold>
           <button onClick={doDelete} style={{width:'100%',marginTop:10,padding:'14px',borderRadius:14,border:`1.5px solid ${confirmDel?'#B04040':'#F5D0D0'}`,background:confirmDel?'#FFF5F5':'transparent',color:'#B04040',fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:15,cursor:'pointer',transition:'all .18s'}}>{confirmDel?'⚠️ Confirm Delete?':'🗑️ Delete Entry'}</button>
-          <BtnOutline full onClick={()=>{setEditSh(false);setConfirmDel(false)}} style={{marginTop:10}}>Cancel</BtnOutline>
+          <BtnOutline full onClick={()=>{setEditSh(false);setConfirmDel(false);setErrMsg('')}} style={{marginTop:10}}>Cancel</BtnOutline>
         </div>
       </Sheet>
     </div>
@@ -544,35 +614,47 @@ function Tasks() {
   const [filter,setFilter]=useState('pending')
   const [saving,setSaving]=useState(false)
   const [confirmDel,setConfirmDel]=useState(false)
+  const [errMsg,setErrMsg]=useState('')
   const [form,setForm]=useState(TASK_INIT)
 
   const filtered=filter==='all'?todos:todos.filter(t=>t.status===filter)
   const pend=todos.filter(t=>t.status==='pending').length
 
-  const save=async()=>{ if(!form.title) return; setSaving(true); const ok=await addTodo(form); setSaving(false); if(ok){setSh(false);setForm(TASK_INIT)} }
+  const save=async()=>{
+    if(!form.title) return
+    setSaving(true); setErrMsg('')
+    const {ok,error}=await addTodo(form)
+    setSaving(false)
+    if(ok){setSh(false);setForm(TASK_INIT)}
+    else setErrMsg(error||'Failed to add task')
+  }
 
   const openEdit=(todo)=>{
     setEditTodo(todo)
     setForm({title:todo.title,due_date:todo.due_date||'',priority:todo.priority||'medium',assigned_to:todo.assigned_to||'Papa',created_by:todo.created_by||'You'})
-    setConfirmDel(false)
+    setConfirmDel(false); setErrMsg('')
     setEditSh(true)
   }
 
   const saveEdit=async()=>{
     if(!editTodo) return
-    setSaving(true)
+    setSaving(true); setErrMsg('')
     // Destructure only the allowed fields — status is intentionally excluded
     // so editing a task never changes its done/pending state
     const {title,due_date,priority,assigned_to}=form
-    const ok=await updateTodo(editTodo.id,{title,due_date,priority,assigned_to})
+    const {ok,error}=await updateTodo(editTodo.id,{title,due_date,priority,assigned_to})
     setSaving(false)
     if(ok){setEditSh(false);setEditTodo(null)}
+    else setErrMsg(error||'Failed to update task')
   }
 
   const doDelete=async()=>{
     if(!confirmDel){setConfirmDel(true);return}
-    setSaving(true); await deleteTodo(editTodo.id); setSaving(false)
-    setEditSh(false);setEditTodo(null);setConfirmDel(false)
+    setSaving(true); setErrMsg('')
+    const {ok,error}=await deleteTodo(editTodo.id)
+    setSaving(false)
+    if(ok){setEditSh(false);setEditTodo(null);setConfirmDel(false)}
+    else setErrMsg(error||'Failed to delete task')
   }
 
   const taskFormFields=()=>(
@@ -633,22 +715,24 @@ function Tasks() {
           ))
         )}
       </div>
-      <Sheet open={sh} onClose={()=>setSh(false)}>
+      <Sheet open={sh} onClose={()=>{setSh(false);setErrMsg('')}}>
         <STitle en='New Task' hi='नया काम जोड़ें' />
         {taskFormFields()}
         <Field label='Created by'><Sel value={form.created_by} onChange={e=>setForm({...form,created_by:e.target.value})} style={{fontSize:15}}>{['Papa','Mummy','You'].map(u=><option key={u}>{u}</option>)}</Sel></Field>
+        {errMsg&&<div style={{background:'#FFF5F5',border:'1px solid #F5D0D0',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#B04040',marginBottom:12}}>⚠️ {errMsg}</div>}
         <div style={{marginTop:16}}>
           <BtnGold full disabled={!form.title||saving} onClick={save}>{saving?'Adding...':'Add Task · जोड़ें'}</BtnGold>
-          <BtnOutline full onClick={()=>setSh(false)} style={{marginTop:10}}>Cancel</BtnOutline>
+          <BtnOutline full onClick={()=>{setSh(false);setErrMsg('')}} style={{marginTop:10}}>Cancel</BtnOutline>
         </div>
       </Sheet>
-      <Sheet open={editSh} onClose={()=>{setEditSh(false);setConfirmDel(false)}}>
+      <Sheet open={editSh} onClose={()=>{setEditSh(false);setConfirmDel(false);setErrMsg('')}}>
         <STitle en='Edit Task' hi='काम बदलें' />
         {taskFormFields()}
+        {errMsg&&<div style={{background:'#FFF5F5',border:'1px solid #F5D0D0',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#B04040',marginBottom:12}}>⚠️ {errMsg}</div>}
         <div style={{marginTop:16}}>
           <BtnGold full disabled={!form.title||saving} onClick={saveEdit}>{saving?'Saving...':'Update Task · अपडेट करें'}</BtnGold>
           <button onClick={doDelete} style={{width:'100%',marginTop:10,padding:'14px',borderRadius:14,border:`1.5px solid ${confirmDel?'#B04040':'#F5D0D0'}`,background:confirmDel?'#FFF5F5':'transparent',color:'#B04040',fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:15,cursor:'pointer',transition:'all .18s'}}>{confirmDel?'⚠️ Confirm Delete?':'🗑️ Delete Task'}</button>
-          <BtnOutline full onClick={()=>{setEditSh(false);setConfirmDel(false)}} style={{marginTop:10}}>Cancel</BtnOutline>
+          <BtnOutline full onClick={()=>{setEditSh(false);setConfirmDel(false);setErrMsg('')}} style={{marginTop:10}}>Cancel</BtnOutline>
         </div>
       </Sheet>
     </div>
