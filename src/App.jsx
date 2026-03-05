@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Login from './Login'
 import Projects from './components/Projects'
+import Reports from './components/Reports'
 import {
   useAuth, useCattle, useMilkLogs, useHealthLogs,
   useFeed, useLedger, useTodos, useAllProjectExpenses
@@ -146,6 +147,7 @@ function Sidebar({ tab, setTab, onSignOut }) {
     { k:'dairy',    icon:'🐄', label:'Dairy',    hi:'डेयरी'      },
     { k:'ledger',   icon:'📒', label:'Ledger',   hi:'बही-खाता'   },
     { k:'projects', icon:'🏗️', label:'Projects', hi:'परियोजनाएँ' },
+    { k:'reports',  icon:'📊', label:'Reports',  hi:'रिपोर्ट'    },
     { k:'tasks',    icon:'✅', label:'Tasks',    hi:'काम'        },
   ]
   return (
@@ -218,7 +220,7 @@ function Header({ onSignOut }) {
 }
 
 function Nav({ tab,setTab }) {
-  const items=[{k:'home',icon:'🏡',label:'Home'},{k:'dairy',icon:'🐄',label:'Dairy'},{k:'ledger',icon:'📒',label:'Ledger'},{k:'projects',icon:'🏗️',label:'Projects'},{k:'tasks',icon:'✅',label:'Tasks'}]
+  const items=[{k:'home',icon:'🏡',label:'Home'},{k:'dairy',icon:'🐄',label:'Dairy'},{k:'ledger',icon:'📒',label:'Ledger'},{k:'projects',icon:'🏗️',label:'Projects'},{k:'reports',icon:'📊',label:'Reports'},{k:'tasks',icon:'✅',label:'Tasks'}]
   return (
     <div style={{display:'flex',background:'rgba(254,250,244,0.97)',backdropFilter:'blur(16px)',borderTop:'1px solid #EBE2D2',padding:'6px 8px 10px',flexShrink:0}}>
       {items.map(it=>(
@@ -916,6 +918,7 @@ export default function App() {
             {tab==='dairy'    && <Dairy    />}
             {tab==='ledger'   && <Ledger   />}
             {tab==='projects' && <Projects />}
+            {tab==='reports'  && <Reports  />}
             {tab==='tasks'    && <Tasks    />}
           </div>
         </div>
@@ -934,6 +937,7 @@ export default function App() {
           {tab==='dairy'    && <Dairy    />}
           {tab==='ledger'   && <Ledger   />}
           {tab==='projects' && <Projects />}
+          {tab==='reports'  && <Reports  />}
           {tab==='tasks'    && <Tasks    />}
         </div>
         <Nav tab={tab} setTab={setTab} />
