@@ -236,9 +236,12 @@ function Home({ nav }) {
   const { entries }       = useLedger()
   const { todos }         = useTodos()
   const { feed }          = useFeed()
+  const { expenses:projExp } = useAllProjectExpenses()
   const todayMilk = milkLogs.filter(l=>l.yield_date===TODAY).reduce((s,l)=>s+(l.qty_liters||0),0)
   const inc  = entries.filter(e=>e.type==='income').reduce((s,e)=>s+e.amount,0)
-  const exp  = entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0)
+  const ledgerExp = entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0)
+  const projectExp = projExp.reduce((s,e)=>s+(e.amount||0),0)
+  const exp  = ledgerExp + projectExp
   const pend = todos.filter(t=>t.status==='pending').length
   const low  = feed.filter(f=>f.stock<=f.reorder_at)
   return (
@@ -264,6 +267,14 @@ function Home({ nav }) {
             <div style={{fontSize:11,color:'#E09090',fontWeight:700,letterSpacing:.8}}>↓ EXPENSE</div>
             <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:21,fontWeight:700,color:'#FFF8EE',marginTop:3}}>{fmt(exp)}</div>
           </div>
+        </div>
+        {projectExp>0&&<div style={{display:'flex',gap:12,marginTop:6,padding:'0 4px',position:'relative'}}>
+          <div style={{fontSize:10,color:'rgba(255,248,238,0.35)'}}>📒 Ledger: {fmt(ledgerExp)}</div>
+          <div style={{fontSize:10,color:'rgba(255,248,238,0.35)'}}>🏗️ Projects: {fmt(projectExp)}</div>
+        </div>}
+        <div style={{textAlign:'center',marginTop:10,padding:'8px 0',borderTop:'1px solid rgba(255,255,255,0.08)',position:'relative'}}>
+          <div style={{fontSize:10,color:'rgba(255,248,238,0.4)',fontWeight:700,letterSpacing:1}}>NET BALANCE</div>
+          <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:inc-exp>=0?'#7DE0B0':'#E09090',marginTop:2}}>{fmt(inc-exp)}</div>
         </div>
       </div>
       {low.length>0&&(
