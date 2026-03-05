@@ -3,7 +3,7 @@ import Login from './Login'
 import Projects from './components/Projects'
 import {
   useAuth, useCattle, useMilkLogs, useHealthLogs,
-  useFeed, useLedger, useTodos
+  useFeed, useLedger, useTodos, useAllProjectExpenses
 } from './hooks'
 
 const TODAY = new Date().toISOString().split('T')[0]
@@ -517,6 +517,8 @@ function Dairy() {
 
 function Ledger() {
   const { entries, addEntry, updateEntry, deleteEntry, uploadReceipt } = useLedger()
+  const { expenses:projExp } = useAllProjectExpenses()
+  const [view,setView]=useState('ledger')
   const [sh,setSh]=useState(false)
   const [editSh,setEditSh]=useState(false)
   const [editEntry,setEditEntry]=useState(null)
@@ -536,6 +538,18 @@ function Ledger() {
   const list=catFilter?typeFiltered.filter(e=>e.category===catFilter):typeFiltered
   const activeCats=Object.keys(CAT).filter(k=>entries.some(e=>e.category===k))
   const amountValid=!isNaN(parseFloat(form.amount))&&parseFloat(form.amount)>0
+
+  /* ── merged list for "All Expenses" view ── */
+  const mergedAll=(()=>{
+    const ledgerItems=entries.map(e=>({...e,source:'ledger',_date:e.entry_date,_amount:e.amount,_desc:e.description,_party:null,_project:null,_cat:e.category}))
+    const projItems=projExp.map(e=>({...e,source:'project',type:'expense',_date:e.date,_amount:e.amount,_desc:e.notes||'',_party:e.party_name,_project:e.projects?.name||'Project',_cat:e.category||'construction'}))
+    const all=[...ledgerItems,...projItems].sort((a,b)=>(b._date||'').localeCompare(a._date||''))
+    return all
+  })()
+  const mergedFiltered=filter==='all'?mergedAll:mergedAll.filter(e=>e.type===filter)
+  const mergedList=catFilter?mergedFiltered.filter(e=>e._cat===catFilter):mergedFiltered
+  const totalExpAll=mergedAll.filter(e=>e.type==='expense').reduce((s,e)=>s+(e._amount||0),0)
+  const totalIncAll=mergedAll.filter(e=>e.type==='income').reduce((s,e)=>s+(e._amount||0),0)
 
   const save=async()=>{
     setSaving(true); setErrMsg('')
@@ -600,6 +614,14 @@ function Ledger() {
           <BtnGold small onClick={()=>{setForm(LEDGER_INIT);setSh(true)}}>+ Add</BtnGold>
         </div>
       </div>
+      {/* ── View toggle ── */}
+      <div style={{display:'flex',gap:4,background:'#EDE6D8',borderRadius:16,padding:5,margin:'12px 20px 0',border:'1px solid #DDD0BC'}}>
+        {[['ledger','📒 Ledger'],['all_expenses','📊 All Expenses']].map(([k,l])=>(
+          <button key={k} onClick={()=>setView(k)} style={{flex:1,padding:'11px 6px',border:'none',borderRadius:11,fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:14,cursor:'pointer',transition:'all .2s',background:view===k?'#fff':'transparent',color:view===k?'#1A1008':'#8A7A60',boxShadow:view===k?'0 2px 10px rgba(60,30,0,0.1)':'none'}}>{l}</button>
+        ))}
+      </div>
+
+      {view==='ledger' ? (
       <div style={{overflowY:'auto',padding:'16px 20px 24px',display:'flex',flexDirection:'column',gap:12}}>
         <div style={{display:'flex',gap:10}}>
           {[{lbl:'INCOME',hi:'कुल आय',val:fmt(inc),c:'#2D8A5E',bg:'#EEF8F2',border:'#C6E8D4'},{lbl:'EXPENSE',hi:'कुल खर्च',val:fmt(exp),c:'#B04040',bg:'#FFF5F5',border:'#F5D0D0'}].map((s,i)=>(
@@ -646,6 +668,47 @@ function Ledger() {
           })}
         </Card>
       </div>
+      ) : (
+      /* ── All Expenses consolidated view ── */
+      <div style={{overflowY:'auto',padding:'16px 20px 24px',display:'flex',flexDirection:'column',gap:12}}>
+        <div style={{display:'flex',gap:10}}>
+          {[{lbl:'TOTAL EXPENSES',hi:'कुल खर्च',val:fmt(totalExpAll),c:'#B04040',bg:'#FFF5F5',border:'#F5D0D0'},{lbl:'TOTAL INCOME',hi:'कुल आय',val:fmt(totalIncAll),c:'#2D8A5E',bg:'#EEF8F2',border:'#C6E8D4'}].map((s,i)=>(
+            <div key={i} style={{flex:1,background:s.bg,borderRadius:16,padding:'14px 16px',border:`1px solid ${s.border}`}}>
+              <div style={{fontSize:11,fontWeight:700,color:s.c,letterSpacing:1}}>{s.lbl}</div>
+              <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:24,fontWeight:700,color:'#1A1008',marginTop:4}}>{s.val}</div>
+              <div style={{fontFamily:'serif',fontSize:11,color:'#8A7A60',marginTop:3}}>{s.hi}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:4,background:'#EDE6D8',borderRadius:14,padding:4,border:'1px solid #DDD0BC'}}>
+          {[['all','All'],['income','↑ Income'],['expense','↓ Expense']].map(([k,l])=>(
+            <button key={k} onClick={()=>setFilter(k)} style={{flex:1,padding:'10px',border:'none',borderRadius:10,cursor:'pointer',background:filter===k?'#fff':'transparent',color:filter===k?'#1A1008':'#8A7A60',fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:14,boxShadow:filter===k?'0 2px 8px rgba(60,30,0,0.1)':'none',transition:'all .18s'}}>{l}</button>
+          ))}
+        </div>
+        <Card style={{padding:'4px 18px'}}>
+          {mergedList.length===0&&<div style={{padding:'20px 0',textAlign:'center',color:'#8A7A60',fontSize:14}}>No entries yet.</div>}
+          {mergedList.map((e,i)=>{
+            const cat=CAT[e._cat]||CAT.other
+            const isProj=e.source==='project'
+            return (
+              <Row key={`${e.source}-${e.id}`} last={i===mergedList.length-1}>
+                <IBox bg={isProj?'#8B691418':cat.color+'18'}>{isProj?'🏗️':cat.icon}</IBox>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#1A1008'}}>{isProj?(e._party||e._project):e._desc}</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:3,alignItems:'center'}}>
+                    {isProj?<span style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:12,fontSize:11,fontWeight:600,color:'#8B6914',background:'#fdf3dc',gap:3}}>🏗️ {e._project}</span>
+                           :<span style={{fontSize:12,color:'#8A7A60'}}>{cat.icon} {cat.label}</span>}
+                    <span style={{fontSize:11,color:'#B0A090'}}>{e._date}</span>
+                    {isProj&&e._desc&&<span style={{fontSize:11,color:'#B0A090'}}>· {e._desc}</span>}
+                  </div>
+                </div>
+                <div style={{fontSize:15,fontWeight:700,color:e.type==='income'?'#2D8A5E':'#B04040',flexShrink:0}}>{e.type==='income'?'+':'−'}{fmt(e._amount)}</div>
+              </Row>
+            )
+          })}
+        </Card>
+      </div>
+      )}
       <Sheet open={sh} onClose={()=>{setSh(false);setErrMsg('')}}>
         <STitle en='New Ledger Entry' hi='नई एंट्री दर्ज करें' />
         {formFields()}

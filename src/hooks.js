@@ -432,6 +432,37 @@ export function useProjectExpenses(projectId) {
   return { expenses, loading, addExpense, refetch: fetch }
 }
 
+export function useAllProjectExpenses() {
+  const [expenses, setExpenses] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetch = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('project_expenses')
+      .select('*, projects ( name )')
+      .eq('farm_id', FARM_ID)
+      .order('date', { ascending: false })
+    if (error) log('useAllProjectExpenses.fetch', error)
+    else setExpenses(data || [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    fetch()
+    const channel = supabase
+      .channel('all-project-expenses-changes')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'project_expenses',
+        filter: `farm_id=eq.${FARM_ID}`
+      }, fetch)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [fetch])
+
+  return { expenses, loading, refetch: fetch }
+}
+
 export function useAuth() {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
