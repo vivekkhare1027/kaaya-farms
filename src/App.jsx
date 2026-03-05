@@ -233,7 +233,7 @@ function Nav({ tab,setTab }) {
   )
 }
 
-function Home({ nav }) {
+function Home({ nav, mobile }) {
   const { logs:milkLogs } = useMilkLogs()
   const { entries }       = useLedger()
   const { todos }         = useTodos()
@@ -247,36 +247,36 @@ function Home({ nav }) {
   const pend = todos.filter(t=>t.status==='pending').length
   const low  = feed.filter(f=>f.stock<=f.reorder_at)
   return (
-    <div style={{overflowY:'auto',padding:'18px 20px 24px',display:'flex',flexDirection:'column',gap:14}}>
-      <div style={{background:'linear-gradient(150deg,#1A3D28 0%,#245A36 100%)',borderRadius:24,padding:'22px 20px',position:'relative',overflow:'hidden'}}>
+    <div style={{overflowY:'auto',padding:mobile?'12px 14px 20px':'18px 20px 24px',display:'flex',flexDirection:'column',gap:mobile?10:14}}>
+      <div style={{background:'linear-gradient(150deg,#1A3D28 0%,#245A36 100%)',borderRadius:mobile?18:24,padding:mobile?'14px 14px':'22px 20px',position:'relative',overflow:'hidden'}}>
         <div style={{position:'absolute',top:-30,right:-20,width:160,height:160,background:'radial-gradient(circle,rgba(184,120,32,0.2) 0%,transparent 70%)',borderRadius:'50%'}} />
-        <div style={{fontSize:11,color:'rgba(255,248,238,0.4)',fontWeight:700,letterSpacing:2,textTransform:'uppercase',marginBottom:16}}>Today · आज का सारांश</div>
-        <div style={{display:'flex',gap:8,position:'relative'}}>
+        <div style={{fontSize:11,color:'rgba(255,248,238,0.4)',fontWeight:700,letterSpacing:2,textTransform:'uppercase',marginBottom:mobile?8:16}}>Today · आज का सारांश</div>
+        <div style={{display:'flex',gap:mobile?6:8,position:'relative'}}>
           {[{val:todayMilk.toFixed(1),lbl:'Litres',hi:'दूध',color:'#7DE0B0'},{val:feed.length,lbl:'Feed Items',hi:'चारा',color:'#FFF8EE'},{val:pend,lbl:'Tasks',hi:'काम',color:pend>0?'#F0C46A':'#7DE0B0'}].map((s,i)=>(
-            <div key={i} style={{flex:1,textAlign:'center',background:'rgba(255,255,255,0.07)',borderRadius:14,padding:'14px 8px',border:'1px solid rgba(255,255,255,0.09)'}}>
-              <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:32,fontWeight:700,color:s.color,lineHeight:1}}>{s.val}</div>
-              <div style={{fontSize:10,color:'rgba(255,248,238,0.45)',marginTop:5,letterSpacing:1}}>{s.lbl.toUpperCase()}</div>
-              <div style={{fontFamily:'serif',fontSize:10,color:'rgba(255,248,238,0.3)',marginTop:2}}>{s.hi}</div>
+            <div key={i} style={{flex:1,textAlign:'center',background:'rgba(255,255,255,0.07)',borderRadius:mobile?10:14,padding:mobile?'8px 4px':'14px 8px',border:'1px solid rgba(255,255,255,0.09)'}}>
+              <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:mobile?22:32,fontWeight:700,color:s.color,lineHeight:1}}>{s.val}</div>
+              <div style={{fontSize:mobile?9:10,color:'rgba(255,248,238,0.45)',marginTop:mobile?3:5,letterSpacing:1}}>{s.lbl.toUpperCase()}</div>
+              {!mobile&&<div style={{fontFamily:'serif',fontSize:10,color:'rgba(255,248,238,0.3)',marginTop:2}}>{s.hi}</div>}
             </div>
           ))}
         </div>
-        <div style={{display:'flex',gap:8,marginTop:12,position:'relative'}}>
-          <div style={{flex:1,background:'rgba(95,212,160,0.1)',borderRadius:12,padding:'10px 12px',border:'1px solid rgba(95,212,160,0.15)'}}>
-            <div style={{fontSize:11,color:'#7DE0B0',fontWeight:700,letterSpacing:.8}}>↑ INCOME</div>
-            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:21,fontWeight:700,color:'#FFF8EE',marginTop:3}}>{fmt(inc)}</div>
+        <div style={{display:'flex',gap:mobile?6:8,marginTop:mobile?8:12,position:'relative'}}>
+          <div style={{flex:1,background:'rgba(95,212,160,0.1)',borderRadius:mobile?10:12,padding:mobile?'7px 10px':'10px 12px',border:'1px solid rgba(95,212,160,0.15)'}}>
+            <div style={{fontSize:mobile?10:11,color:'#7DE0B0',fontWeight:700,letterSpacing:.8}}>↑ INCOME</div>
+            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:mobile?18:21,fontWeight:700,color:'#FFF8EE',marginTop:2}}>{fmt(inc)}</div>
           </div>
-          <div style={{flex:1,background:'rgba(220,100,100,0.1)',borderRadius:12,padding:'10px 12px',border:'1px solid rgba(220,100,100,0.15)'}}>
-            <div style={{fontSize:11,color:'#E09090',fontWeight:700,letterSpacing:.8}}>↓ EXPENSE</div>
-            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:21,fontWeight:700,color:'#FFF8EE',marginTop:3}}>{fmt(exp)}</div>
+          <div style={{flex:1,background:'rgba(220,100,100,0.1)',borderRadius:mobile?10:12,padding:mobile?'7px 10px':'10px 12px',border:'1px solid rgba(220,100,100,0.15)'}}>
+            <div style={{fontSize:mobile?10:11,color:'#E09090',fontWeight:700,letterSpacing:.8}}>↓ EXPENSE</div>
+            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:mobile?18:21,fontWeight:700,color:'#FFF8EE',marginTop:2}}>{fmt(exp)}</div>
           </div>
         </div>
-        {projectExp>0&&<div style={{display:'flex',gap:12,marginTop:6,padding:'0 4px',position:'relative'}}>
-          <div style={{fontSize:10,color:'rgba(255,248,238,0.35)'}}>📒 Ledger: {fmt(ledgerExp)}</div>
-          <div style={{fontSize:10,color:'rgba(255,248,238,0.35)'}}>🏗️ Projects: {fmt(projectExp)}</div>
+        {projectExp>0&&<div style={{display:'flex',gap:12,marginTop:mobile?4:6,padding:'0 4px',position:'relative'}}>
+          <div style={{fontSize:mobile?9:10,color:'rgba(255,248,238,0.35)'}}>📒 Ledger: {fmt(ledgerExp)}</div>
+          <div style={{fontSize:mobile?9:10,color:'rgba(255,248,238,0.35)'}}>🏗️ Projects: {fmt(projectExp)}</div>
         </div>}
-        <div style={{textAlign:'center',marginTop:10,padding:'8px 0',borderTop:'1px solid rgba(255,255,255,0.08)',position:'relative'}}>
-          <div style={{fontSize:10,color:'rgba(255,248,238,0.4)',fontWeight:700,letterSpacing:1}}>NET BALANCE</div>
-          <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:inc-exp>=0?'#7DE0B0':'#E09090',marginTop:2}}>{fmt(inc-exp)}</div>
+        <div style={{textAlign:'center',marginTop:mobile?6:10,padding:mobile?'6px 0':'8px 0',borderTop:'1px solid rgba(255,255,255,0.08)',position:'relative'}}>
+          <div style={{fontSize:mobile?9:10,color:'rgba(255,248,238,0.4)',fontWeight:700,letterSpacing:1}}>NET BALANCE</div>
+          <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:mobile?18:22,fontWeight:700,color:inc-exp>=0?'#7DE0B0':'#E09090',marginTop:2}}>{fmt(inc-exp)}</div>
         </div>
       </div>
       {low.length>0&&(
@@ -933,7 +933,7 @@ export default function App() {
       <div style={{maxWidth:460,margin:'0 auto',height:'100vh',display:'flex',flexDirection:'column',background:'#F7F1E8',overflow:'hidden',boxShadow:'0 0 60px rgba(0,0,0,0.15)'}}>
         <Header onSignOut={signOut} />
         <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-          {tab==='home'     && <Home     nav={setTab} />}
+          {tab==='home'     && <Home     nav={setTab} mobile />}
           {tab==='dairy'    && <Dairy    />}
           {tab==='ledger'   && <Ledger   />}
           {tab==='projects' && <Projects />}
