@@ -260,24 +260,41 @@ function Home({ nav, mobile }) {
             </div>
           ))}
         </div>
-        <div style={{display:'flex',gap:mobile?6:8,marginTop:mobile?8:12,position:'relative'}}>
-          <div style={{flex:1,background:'rgba(95,212,160,0.1)',borderRadius:mobile?10:12,padding:mobile?'7px 10px':'10px 12px',border:'1px solid rgba(95,212,160,0.15)'}}>
-            <div style={{fontSize:mobile?10:11,color:'#7DE0B0',fontWeight:700,letterSpacing:.8}}>↑ INCOME</div>
-            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:mobile?18:21,fontWeight:700,color:'#FFF8EE',marginTop:2}}>{fmt(inc)}</div>
+        {mobile?<>
+          <div style={{display:'flex',gap:6,marginTop:8,position:'relative'}}>
+            <div style={{flex:1,display:'flex',alignItems:'center',gap:4,background:'rgba(95,212,160,0.1)',borderRadius:8,padding:'5px 8px',border:'1px solid rgba(95,212,160,0.15)'}}>
+              <span style={{fontSize:10,color:'#7DE0B0',fontWeight:700}}>↑ INCOME</span>
+              <span style={{fontSize:13,fontWeight:700,color:'#FFF8EE'}}>{fmt(inc)}</span>
+            </div>
+            <div style={{flex:1,display:'flex',alignItems:'center',gap:4,background:'rgba(220,100,100,0.1)',borderRadius:8,padding:'5px 8px',border:'1px solid rgba(220,100,100,0.15)'}}>
+              <span style={{fontSize:10,color:'#E09090',fontWeight:700}}>↓ EXP</span>
+              <span style={{fontSize:13,fontWeight:700,color:'#FFF8EE'}}>{fmt(exp)}</span>
+            </div>
           </div>
-          <div style={{flex:1,background:'rgba(220,100,100,0.1)',borderRadius:mobile?10:12,padding:mobile?'7px 10px':'10px 12px',border:'1px solid rgba(220,100,100,0.15)'}}>
-            <div style={{fontSize:mobile?10:11,color:'#E09090',fontWeight:700,letterSpacing:.8}}>↓ EXPENSE</div>
-            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:mobile?18:21,fontWeight:700,color:'#FFF8EE',marginTop:2}}>{fmt(exp)}</div>
+          <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:6,marginTop:6,paddingTop:5,borderTop:'1px solid rgba(255,255,255,0.08)',position:'relative'}}>
+            <span style={{fontSize:9,color:'rgba(255,248,238,0.4)',fontWeight:700,letterSpacing:1}}>NET</span>
+            <span style={{fontSize:15,fontWeight:700,color:inc-exp>=0?'#7DE0B0':'#E09090'}}>{fmt(inc-exp)}</span>
           </div>
-        </div>
-        {projectExp>0&&<div style={{display:'flex',gap:12,marginTop:mobile?4:6,padding:'0 4px',position:'relative'}}>
-          <div style={{fontSize:mobile?9:10,color:'rgba(255,248,238,0.35)'}}>📒 Ledger: {fmt(ledgerExp)}</div>
-          <div style={{fontSize:mobile?9:10,color:'rgba(255,248,238,0.35)'}}>🏗️ Projects: {fmt(projectExp)}</div>
-        </div>}
-        <div style={{textAlign:'center',marginTop:mobile?6:10,padding:mobile?'6px 0':'8px 0',borderTop:'1px solid rgba(255,255,255,0.08)',position:'relative'}}>
-          <div style={{fontSize:mobile?9:10,color:'rgba(255,248,238,0.4)',fontWeight:700,letterSpacing:1}}>NET BALANCE</div>
-          <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:mobile?18:22,fontWeight:700,color:inc-exp>=0?'#7DE0B0':'#E09090',marginTop:2}}>{fmt(inc-exp)}</div>
-        </div>
+        </>:<>
+          <div style={{display:'flex',gap:8,marginTop:12,position:'relative'}}>
+            <div style={{flex:1,background:'rgba(95,212,160,0.1)',borderRadius:12,padding:'10px 12px',border:'1px solid rgba(95,212,160,0.15)'}}>
+              <div style={{fontSize:11,color:'#7DE0B0',fontWeight:700,letterSpacing:.8}}>↑ INCOME</div>
+              <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:21,fontWeight:700,color:'#FFF8EE',marginTop:3}}>{fmt(inc)}</div>
+            </div>
+            <div style={{flex:1,background:'rgba(220,100,100,0.1)',borderRadius:12,padding:'10px 12px',border:'1px solid rgba(220,100,100,0.15)'}}>
+              <div style={{fontSize:11,color:'#E09090',fontWeight:700,letterSpacing:.8}}>↓ EXPENSE</div>
+              <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:21,fontWeight:700,color:'#FFF8EE',marginTop:3}}>{fmt(exp)}</div>
+            </div>
+          </div>
+          {projectExp>0&&<div style={{display:'flex',gap:12,marginTop:6,padding:'0 4px',position:'relative'}}>
+            <div style={{fontSize:10,color:'rgba(255,248,238,0.35)'}}>📒 Ledger: {fmt(ledgerExp)}</div>
+            <div style={{fontSize:10,color:'rgba(255,248,238,0.35)'}}>🏗️ Projects: {fmt(projectExp)}</div>
+          </div>}
+          <div style={{textAlign:'center',marginTop:10,padding:'8px 0',borderTop:'1px solid rgba(255,255,255,0.08)',position:'relative'}}>
+            <div style={{fontSize:10,color:'rgba(255,248,238,0.4)',fontWeight:700,letterSpacing:1}}>NET BALANCE</div>
+            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:22,fontWeight:700,color:inc-exp>=0?'#7DE0B0':'#E09090',marginTop:2}}>{fmt(inc-exp)}</div>
+          </div>
+        </>}
       </div>
       {low.length>0&&(
         <Card style={{background:'#FFF8F5',borderColor:'rgba(176,64,64,0.2)'}}>
