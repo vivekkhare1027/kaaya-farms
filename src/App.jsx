@@ -220,11 +220,11 @@ function Header({ onSignOut }) {
 }
 
 function Nav({ tab,setTab }) {
-  const items=[{k:'home',icon:'🏡',label:'Home'},{k:'ledger',icon:'📒',label:'Ledger'},{k:'projects',icon:'🏗️',label:'Projects'},{k:'tasks',icon:'✅',label:'Tasks'},{k:'reports',icon:'📊',label:'Reports'}]
+  const items=[{k:'home',icon:'🏡',label:'Home'},{k:'dairy',icon:'🥛',label:'Dairy'},{k:'ledger',icon:'📒',label:'Ledger'},{k:'projects',icon:'🏗️',label:'Projects'},{k:'tasks',icon:'✅',label:'Tasks'},{k:'reports',icon:'📊',label:'Reports'}]
   return (
-    <div style={{display:'flex',background:'rgba(254,250,244,0.97)',backdropFilter:'blur(16px)',borderTop:'1px solid #EBE2D2',padding:'6px 8px calc(10px + env(safe-area-inset-bottom, 0px))',flexShrink:0}}>
+    <div style={{display:'flex',overflowX:'auto',scrollbarWidth:'none',WebkitOverflowScrolling:'touch',background:'rgba(254,250,244,0.97)',backdropFilter:'blur(16px)',borderTop:'1px solid #EBE2D2',padding:'6px 8px calc(10px + env(safe-area-inset-bottom, 0px))',flexShrink:0}}>
       {items.map(it=>(
-        <button key={it.k} onClick={()=>setTab(it.k)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'7px 4px',border:'none',background:'transparent',cursor:'pointer',borderRadius:12,transition:'all .18s',color:tab===it.k?'#1E4530':'#B0A090',fontFamily:"'DM Sans',sans-serif",fontSize:10,fontWeight:700,letterSpacing:.4,textTransform:'uppercase'}}>
+        <button key={it.k} onClick={()=>setTab(it.k)} style={{minWidth:64,flex:'0 0 auto',display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'7px 4px',border:'none',background:'transparent',cursor:'pointer',borderRadius:12,transition:'all .18s',color:tab===it.k?'#1E4530':'#B0A090',fontFamily:"'DM Sans',sans-serif",fontSize:10,fontWeight:700,letterSpacing:.4,textTransform:'uppercase'}}>
           <div style={{width:38,height:38,borderRadius:12,fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',background:tab===it.k?'rgba(30,69,48,0.1)':'transparent',transition:'background .18s'}}>{it.icon}</div>
           {it.label}
         </button>
